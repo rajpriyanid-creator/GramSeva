@@ -10,6 +10,7 @@ import * as FileSystem from "expo-file-system";
 import { useSessionStore } from "@/store/session.store";
 import { ApiService } from "@/services/api.service";
 import { AudioService } from "@/services/audio.service";
+import { TRANSLATIONS } from "@/constants/translations";
 
 const STATES = ["AP","AR","AS","BR","CG","GA","GJ","HR","HP","JH","KA","KL","MP","MH","MN","ML","MZ","NL","OD","PB","RJ","SK","TN","TS","TR","UP","UK","WB","DL","JK","LA","AN","CH","DN","DD","LD","PY"];
 const STATES_FULL: Record<string, string> = {
@@ -53,6 +54,103 @@ const initial: ProfileData = {
   bankAccountNo: "", ifscCode: "", bankName: "",
 };
 
+// Helper Components declared OUTSIDE to fix keyboard focus loss issue
+const Field = ({
+  label,
+  fieldKey,
+  children,
+  hideMic = false,
+  speakingField,
+  recordingField,
+  fieldLoading,
+  onSpeak,
+  onMicPress,
+}: {
+  label: string;
+  fieldKey: string;
+  children: React.ReactNode;
+  hideMic?: boolean;
+  speakingField: string | null;
+  recordingField: string | null;
+  fieldLoading: string | null;
+  onSpeak: (k: string, label: string) => void;
+  onMicPress: (k: string) => void;
+}) => {
+  const isSpeaking = speakingField === fieldKey;
+  const isRecording = recordingField === fieldKey;
+  const isLoading = fieldLoading === fieldKey;
+
+  return (
+    <View style={s.field}>
+      <View style={s.fieldHeaderRow}>
+        <Text style={s.fieldLabel}>{label}</Text>
+        <View style={s.actionsRow}>
+          {/* Speaker Icon */}
+          <TouchableOpacity
+            onPress={() => onSpeak(fieldKey, label)}
+            style={s.iconBtn}
+          >
+            <Ionicons
+              name={isSpeaking ? "volume-mute" : "volume-high"}
+              size={14}
+              color={isSpeaking ? "#F5C518" : "#A8D5B5"}
+            />
+          </TouchableOpacity>
+
+          {/* Mic Icon */}
+          {!hideMic && (
+            <TouchableOpacity
+              onPress={() => onMicPress(fieldKey)}
+              style={[s.iconBtn, isRecording && s.iconBtnActive]}
+            >
+              {isLoading ? (
+                <ActivityIndicator size="small" color="#F5C518" />
+              ) : (
+                <Ionicons
+                  name={isRecording ? "mic-off" : "mic"}
+                  size={14}
+                  color={isRecording ? "#FF3B30" : "#A8D5B5"}
+                />
+              )}
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+      {children}
+    </View>
+  );
+};
+
+const Input = ({ value, onChange, placeholder, keyboard = "default", max }: any) => (
+  <TextInput
+    style={s.textInput} value={value} onChangeText={onChange}
+    placeholder={placeholder} placeholderTextColor="#5a8a6a"
+    keyboardType={keyboard} maxLength={max}
+  />
+);
+
+const Picker = ({ options, value, onChange }: { options: string[]; value: string; onChange: (v: string) => void }) => (
+  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.chipScroll}>
+    {options.map(opt => (
+      <TouchableOpacity
+        key={opt} style={[s.chip, value === opt && s.chipActive]}
+        onPress={() => onChange(opt)}
+      >
+        <Text style={[s.chipText, value === opt && s.chipTextActive]}>{opt}</Text>
+      </TouchableOpacity>
+    ))}
+  </ScrollView>
+);
+
+const Toggle = ({ value, onChange, label }: { value: boolean; onChange: (v: boolean) => void; label: string }) => (
+  <TouchableOpacity style={s.toggleRow} onPress={() => onChange(!value)}>
+    <View style={[s.toggleBox, value && s.toggleBoxOn]}>
+      {value && <Ionicons name="checkmark" size={14} color="#0A3728" />}
+    </View>
+    <Text style={s.toggleLabel}>{label}</Text>
+  </TouchableOpacity>
+);
+
 export default function ProfileSetupScreen() {
   const { user, setAuth, token, language } = useSessionStore();
   const [data, setData] = useState<ProfileData>(() => {
@@ -94,14 +192,17 @@ export default function ProfileSetupScreen() {
   const [fieldLoading, setFieldLoading] = useState<string | null>(null);
   const recordingRef = useRef<Audio.Recording | null>(null);
 
+  const activeLang = language?.code || "en-IN";
+  const t = TRANSLATIONS[activeLang] || TRANSLATIONS["en-IN"];
+
   const set = (key: keyof ProfileData, val: any) => setData(prev => ({ ...prev, [key]: val }));
 
   const sections: { key: Section; label: string; icon: string }[] = [
-    { key: "personal",  label: "Personal",  icon: "person" },
-    { key: "location",  label: "Location",  icon: "location" },
-    { key: "economic",  label: "Economic",  icon: "cash" },
-    { key: "documents", label: "Documents", icon: "document-text" },
-    { key: "bank",      label: "Bank",      icon: "card" },
+    { key: "personal",  label: t.personalTab,  icon: "person" },
+    { key: "location",  label: t.locationTab,  icon: "location" },
+    { key: "economic",  label: t.economicTab,  icon: "cash" },
+    { key: "documents", label: t.documentsTab, icon: "document-text" },
+    { key: "bank",      label: t.bankTab,      icon: "card" },
   ];
 
   const handleSpeakLabel = async (key: string, labelText: string) => {
@@ -111,7 +212,7 @@ export default function ProfileSetupScreen() {
     }
     setSpeakingField(key);
     try {
-      const data = await ApiService.getChatTTS(labelText, language?.code || "en-IN");
+      const data = await ApiService.getChatTTS(labelText, activeLang);
       if (data.audio) {
         await AudioService.playBase64Audio(data.audio);
       }
@@ -119,6 +220,14 @@ export default function ProfileSetupScreen() {
       console.warn("TTS failed for label:", labelText, err);
     } finally {
       setSpeakingField(null);
+    }
+  };
+
+  const handleMicPress = (key: string) => {
+    if (recordingField === key) {
+      handleStopRecording(key as keyof ProfileData);
+    } else {
+      handleStartRecording(key as keyof ProfileData);
     }
   };
 
@@ -154,7 +263,7 @@ export default function ProfileSetupScreen() {
         encoding: FileSystem.EncodingType.Base64,
       });
 
-      const res = await ApiService.rawTranscribe(base64Audio, language?.code || "en-IN");
+      const res = await ApiService.rawTranscribe(base64Audio, activeLang);
       if (res.transcript) {
         let val = res.transcript.trim();
         // Clean up numeric inputs
@@ -174,7 +283,7 @@ export default function ProfileSetupScreen() {
   const handleSave = async () => {
     if (!user?.id) return;
     if (!data.age || !data.gender || !data.state) {
-      return Alert.alert("Required", "Please fill Age, Gender and State at minimum.");
+      return Alert.alert("Required", t.requiredAlert);
     }
     setLoading(true);
     try {
@@ -189,98 +298,6 @@ export default function ProfileSetupScreen() {
     }
   };
 
-  const Field = ({
-    label,
-    fieldKey,
-    children,
-    hideMic = false,
-  }: {
-    label: string;
-    fieldKey: keyof ProfileData;
-    children: React.ReactNode;
-    hideMic?: boolean;
-  }) => {
-    const isSpeaking = speakingField === fieldKey;
-    const isRecording = recordingField === fieldKey;
-    const isLoading = fieldLoading === fieldKey;
-
-    return (
-      <View style={s.field}>
-        <View style={s.fieldHeaderRow}>
-          <Text style={s.fieldLabel}>{label}</Text>
-          <View style={s.actionsRow}>
-            {/* Speaker Icon */}
-            <TouchableOpacity
-              onPress={() => handleSpeakLabel(fieldKey, label)}
-              style={s.iconBtn}
-            >
-              <Ionicons
-                name={isSpeaking ? "volume-mute" : "volume-high"}
-                size={14}
-                color={isSpeaking ? "#F5C518" : "#A8D5B5"}
-              />
-            </TouchableOpacity>
-
-            {/* Mic Icon */}
-            {!hideMic && (
-              <TouchableOpacity
-                onPress={() => {
-                  if (isRecording) {
-                    handleStopRecording(fieldKey);
-                  } else {
-                    handleStartRecording(fieldKey);
-                  }
-                }}
-                style={[s.iconBtn, isRecording && s.iconBtnActive]}
-              >
-                {isLoading ? (
-                  <ActivityIndicator size="small" color="#F5C518" />
-                ) : (
-                  <Ionicons
-                    name={isRecording ? "mic-off" : "mic"}
-                    size={14}
-                    color={isRecording ? "#FF3B30" : "#A8D5B5"}
-                  />
-                )}
-              </TouchableOpacity>
-            )}
-          </View>
-        </View>
-        {children}
-      </View>
-    );
-  };
-
-  const Input = ({ value, onChange, placeholder, keyboard = "default", max }: any) => (
-    <TextInput
-      style={s.textInput} value={value} onChangeText={onChange}
-      placeholder={placeholder} placeholderTextColor="#5a8a6a"
-      keyboardType={keyboard} maxLength={max}
-    />
-  );
-
-  const Picker = ({ options, value, onChange }: { options: string[]; value: string; onChange: (v: string) => void }) => (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.chipScroll}>
-      {options.map(opt => (
-        <TouchableOpacity
-          key={opt} style={[s.chip, value === opt && s.chipActive]}
-          onPress={() => onChange(opt)}
-        >
-          <Text style={[s.chipText, value === opt && s.chipTextActive]}>{opt}</Text>
-        </TouchableOpacity>
-      ))}
-    </ScrollView>
-  );
-
-  const Toggle = ({ value, onChange, label }: { value: boolean; onChange: (v: boolean) => void; label: string }) => (
-    <TouchableOpacity style={s.toggleRow} onPress={() => onChange(!value)}>
-      <View style={[s.toggleBox, value && s.toggleBoxOn]}>
-        {value && <Ionicons name="checkmark" size={14} color="#0A3728" />}
-      </View>
-      <Text style={s.toggleLabel}>{label}</Text>
-    </TouchableOpacity>
-  );
-
   return (
     <SafeAreaView style={s.container}>
       {/* GramSeva ID Banner */}
@@ -291,8 +308,8 @@ export default function ProfileSetupScreen() {
         </View>
       )}
 
-      <Text style={s.title}>Complete Your Profile</Text>
-      <Text style={s.subtitle}>Required to find eligible government schemes</Text>
+      <Text style={s.title}>{t.profileTitle}</Text>
+      <Text style={s.subtitle}>{t.profileSubtitle}</Text>
 
       {/* Section Tabs */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.sectionBar}>
@@ -308,29 +325,29 @@ export default function ProfileSetupScreen() {
       </ScrollView>
 
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
-        <ScrollView style={s.form} contentContainerStyle={{ padding: 20, paddingBottom: 100 }}>
+        <ScrollView style={s.form} contentContainerStyle={{ padding: 20, paddingBottom: 100 }} keyboardShouldPersistTaps="handled">
 
           {section === "personal" && (
             <>
-              <Field label="Age *" fieldKey="age">
+              <Field label={t.age} fieldKey="age" speakingField={speakingField} recordingField={recordingField} fieldLoading={fieldLoading} onSpeak={handleSpeakLabel} onMicPress={handleMicPress}>
                 <Input value={data.age} onChange={(v: string) => set("age", v)} placeholder="e.g. 35" keyboard="numeric" max={3} />
               </Field>
-              <Field label="Gender *" fieldKey="gender" hideMic>
+              <Field label={t.gender} fieldKey="gender" hideMic speakingField={speakingField} recordingField={recordingField} fieldLoading={fieldLoading} onSpeak={handleSpeakLabel} onMicPress={handleMicPress}>
                 <Picker options={["M", "F", "OTHER"]} value={data.gender} onChange={(v) => set("gender", v)} />
               </Field>
-              <Field label="Marital Status" fieldKey="maritalStatus" hideMic>
+              <Field label={t.maritalStatus} fieldKey="maritalStatus" hideMic speakingField={speakingField} recordingField={recordingField} fieldLoading={fieldLoading} onSpeak={handleSpeakLabel} onMicPress={handleMicPress}>
                 <Picker options={["Unmarried", "Married", "Widowed", "Divorced"]} value={data.maritalStatus} onChange={(v) => set("maritalStatus", v)} />
               </Field>
-              <Field label="Family Size (members)" fieldKey="familySize">
+              <Field label={t.familySize} fieldKey="familySize" speakingField={speakingField} recordingField={recordingField} fieldLoading={fieldLoading} onSpeak={handleSpeakLabel} onMicPress={handleMicPress}>
                 <Input value={data.familySize} onChange={(v: string) => set("familySize", v)} placeholder="e.g. 4" keyboard="numeric" max={2} />
               </Field>
-              <Field label="Education Level" fieldKey="educationLevel" hideMic>
+              <Field label={t.educationLevel} fieldKey="educationLevel" hideMic speakingField={speakingField} recordingField={recordingField} fieldLoading={fieldLoading} onSpeak={handleSpeakLabel} onMicPress={handleMicPress}>
                 <Picker options={["No Formal", "5th Pass", "8th Pass", "10th Pass", "12th Pass", "Graduate", "Post Graduate"]}
                   value={data.educationLevel} onChange={(v) => set("educationLevel", v)} />
               </Field>
-              <Toggle value={data.disabilityStatus} onChange={(v) => set("disabilityStatus", v)} label="Person with Disability (PwD)" />
+              <Toggle value={data.disabilityStatus} onChange={(v) => set("disabilityStatus", v)} label={t.pwd} />
               {data.disabilityStatus && (
-                <Field label="Disability Percentage (%)" fieldKey="disabilityPercentage">
+                <Field label={t.disabilityPercentage} fieldKey="disabilityPercentage" speakingField={speakingField} recordingField={recordingField} fieldLoading={fieldLoading} onSpeak={handleSpeakLabel} onMicPress={handleMicPress}>
                   <Input value={data.disabilityPercentage} onChange={(v: string) => set("disabilityPercentage", v)} placeholder="e.g. 40" keyboard="numeric" max={3} />
                 </Field>
               )}
@@ -339,8 +356,9 @@ export default function ProfileSetupScreen() {
 
           {section === "location" && (
             <>
-              <Field label="State *" fieldKey="state" hideMic>
-                <ScrollView style={{ maxHeight: 200 }}>
+              {/* Nested scroll view gets nestedScrollEnabled={true} to allow proper scrolling in vertical container */}
+              <Field label={t.state} fieldKey="state" hideMic speakingField={speakingField} recordingField={recordingField} fieldLoading={fieldLoading} onSpeak={handleSpeakLabel} onMicPress={handleMicPress}>
+                <ScrollView style={{ maxHeight: 200 }} nestedScrollEnabled={true}>
                   {STATES.map(code => (
                     <TouchableOpacity
                       key={code} style={[s.stateRow, data.state === code && s.stateRowActive]}
@@ -354,10 +372,10 @@ export default function ProfileSetupScreen() {
                   ))}
                 </ScrollView>
               </Field>
-              <Field label="District" fieldKey="district">
+              <Field label={t.district} fieldKey="district" speakingField={speakingField} recordingField={recordingField} fieldLoading={fieldLoading} onSpeak={handleSpeakLabel} onMicPress={handleMicPress}>
                 <Input value={data.district} onChange={(v: string) => set("district", v)} placeholder="e.g. Lucknow" />
               </Field>
-              <Field label="House Type" fieldKey="houseType" hideMic>
+              <Field label={t.houseType} fieldKey="houseType" hideMic speakingField={speakingField} recordingField={recordingField} fieldLoading={fieldLoading} onSpeak={handleSpeakLabel} onMicPress={handleMicPress}>
                 <Picker options={["Pucca", "Semi-Pucca", "Kachha"]} value={data.houseType} onChange={(v) => set("houseType", v)} />
               </Field>
             </>
@@ -365,24 +383,24 @@ export default function ProfileSetupScreen() {
 
           {section === "economic" && (
             <>
-              <Field label="Category (Caste)" fieldKey="caste_category" hideMic>
+              <Field label={t.category} fieldKey="caste_category" hideMic speakingField={speakingField} recordingField={recordingField} fieldLoading={fieldLoading} onSpeak={handleSpeakLabel} onMicPress={handleMicPress}>
                 <Picker options={["SC", "ST", "OBC", "GEN", "EWS"]} value={data.caste_category} onChange={(v) => set("caste_category", v)} />
               </Field>
-              <Field label="Community / Sub-caste" fieldKey="community">
+              <Field label={t.community} fieldKey="community" speakingField={speakingField} recordingField={recordingField} fieldLoading={fieldLoading} onSpeak={handleSpeakLabel} onMicPress={handleMicPress}>
                 <Input value={data.community} onChange={(v: string) => set("community", v)} placeholder="e.g. Kurmi, Yadav, Paraiyar..." />
               </Field>
-              <Field label="Annual Family Income (₹)" fieldKey="annual_income">
+              <Field label={t.annualIncome} fieldKey="annual_income" speakingField={speakingField} recordingField={recordingField} fieldLoading={fieldLoading} onSpeak={handleSpeakLabel} onMicPress={handleMicPress}>
                 <Input value={data.annual_income} onChange={(v: string) => set("annual_income", v)} placeholder="e.g. 120000" keyboard="numeric" />
               </Field>
-              <Toggle value={data.bpl_card} onChange={(v) => set("bpl_card", v)} label="I have a BPL / Ration Card" />
-              <Field label="Occupation" fieldKey="occupation" hideMic>
+              <Toggle value={data.bpl_card} onChange={(v) => set("bpl_card", v)} label={t.bplCard} />
+              <Field label={t.occupation} fieldKey="occupation" hideMic speakingField={speakingField} recordingField={recordingField} fieldLoading={fieldLoading} onSpeak={handleSpeakLabel} onMicPress={handleMicPress}>
                 <Picker options={["farmer", "labourer", "business", "student", "govt_employee", "private_employee", "other"]}
                   value={data.occupation} onChange={(v) => set("occupation", v)} />
               </Field>
-              <Field label="Agricultural Land (Acres)" fieldKey="land_acres">
+              <Field label={t.landAcres} fieldKey="land_acres" speakingField={speakingField} recordingField={recordingField} fieldLoading={fieldLoading} onSpeak={handleSpeakLabel} onMicPress={handleMicPress}>
                 <Input value={data.land_acres} onChange={(v: string) => set("land_acres", v)} placeholder="e.g. 3.5 (enter 0 if none)" keyboard="decimal-pad" />
               </Field>
-              <Field label="Land Type" fieldKey="landType" hideMic>
+              <Field label={t.landType} fieldKey="landType" hideMic speakingField={speakingField} recordingField={recordingField} fieldLoading={fieldLoading} onSpeak={handleSpeakLabel} onMicPress={handleMicPress}>
                 <Picker options={["Agricultural", "Residential", "Mixed", "None"]} value={data.landType} onChange={(v) => set("landType", v)} />
               </Field>
             </>
@@ -392,21 +410,21 @@ export default function ProfileSetupScreen() {
             <>
               <View style={s.docNote}>
                 <Ionicons name="information-circle" size={16} color="#F5C518" />
-                <Text style={s.docNoteText}>Enter document numbers exactly as printed. These are used to verify eligibility for schemes.</Text>
+                <Text style={s.docNoteText}>{t.docNote}</Text>
               </View>
-              <Field label="Aadhaar Number" fieldKey="aadhaarNo">
+              <Field label={t.aadhaarNo} fieldKey="aadhaarNo" speakingField={speakingField} recordingField={recordingField} fieldLoading={fieldLoading} onSpeak={handleSpeakLabel} onMicPress={handleMicPress}>
                 <Input value={data.aadhaarNo} onChange={(v: string) => set("aadhaarNo", v)} placeholder="XXXX XXXX XXXX" keyboard="numeric" max={14} />
               </Field>
-              <Field label="Ration Card Number" fieldKey="rationCardNo">
+              <Field label={t.rationCardNo} fieldKey="rationCardNo" speakingField={speakingField} recordingField={recordingField} fieldLoading={fieldLoading} onSpeak={handleSpeakLabel} onMicPress={handleMicPress}>
                 <Input value={data.rationCardNo} onChange={(v: string) => set("rationCardNo", v)} placeholder="e.g. RC-TN-2022-0123456" />
               </Field>
-              <Field label="Income Certificate Number" fieldKey="incomeCertNo">
+              <Field label={t.incomeCertNo} fieldKey="incomeCertNo" speakingField={speakingField} recordingField={recordingField} fieldLoading={fieldLoading} onSpeak={handleSpeakLabel} onMicPress={handleMicPress}>
                 <Input value={data.incomeCertNo} onChange={(v: string) => set("incomeCertNo", v)} placeholder="e.g. INC-TN-CHN-2022-001" />
               </Field>
-              <Field label="Community / Caste Certificate Number" fieldKey="communityCertNo">
+              <Field label={t.communityCertNo} fieldKey="communityCertNo" speakingField={speakingField} recordingField={recordingField} fieldLoading={fieldLoading} onSpeak={handleSpeakLabel} onMicPress={handleMicPress}>
                 <Input value={data.communityCertNo} onChange={(v: string) => set("communityCertNo", v)} placeholder="e.g. CC-SC-TN-2020-047" />
               </Field>
-              <Field label="Voter ID Number" fieldKey="voterId">
+              <Field label={t.voterId} fieldKey="voterId" speakingField={speakingField} recordingField={recordingField} fieldLoading={fieldLoading} onSpeak={handleSpeakLabel} onMicPress={handleMicPress}>
                 <Input value={data.voterId} onChange={(v: string) => set("voterId", v)} placeholder="e.g. TML9876543" />
               </Field>
             </>
@@ -416,15 +434,15 @@ export default function ProfileSetupScreen() {
             <>
               <View style={s.docNote}>
                 <Ionicons name="shield-checkmark" size={16} color="#4CAF50" />
-                <Text style={s.docNoteText}>Bank details are required for Direct Benefit Transfer (DBT) schemes.</Text>
+                <Text style={s.docNoteText}>{t.bankNote}</Text>
               </View>
-              <Field label="Bank Account Number" fieldKey="bankAccountNo">
+              <Field label={t.bankAccountNo} fieldKey="bankAccountNo" speakingField={speakingField} recordingField={recordingField} fieldLoading={fieldLoading} onSpeak={handleSpeakLabel} onMicPress={handleMicPress}>
                 <Input value={data.bankAccountNo} onChange={(v: string) => set("bankAccountNo", v)} placeholder="Account number" keyboard="numeric" max={18} />
               </Field>
-              <Field label="IFSC Code" fieldKey="ifscCode">
+              <Field label={t.ifscCode} fieldKey="ifscCode" speakingField={speakingField} recordingField={recordingField} fieldLoading={fieldLoading} onSpeak={handleSpeakLabel} onMicPress={handleMicPress}>
                 <Input value={data.ifscCode} onChange={(v: string) => set("ifscCode", v.toUpperCase())} placeholder="e.g. SBIN0001234" max={11} />
               </Field>
-              <Field label="Bank Name" fieldKey="bankName">
+              <Field label={t.bankName} fieldKey="bankName" speakingField={speakingField} recordingField={recordingField} fieldLoading={fieldLoading} onSpeak={handleSpeakLabel} onMicPress={handleMicPress}>
                 <Input value={data.bankName} onChange={(v: string) => set("bankName", v)} placeholder="e.g. State Bank of India" />
               </Field>
             </>
@@ -438,12 +456,12 @@ export default function ProfileSetupScreen() {
           {loading ? <ActivityIndicator color="#0A3728" /> : (
             <>
               <Ionicons name="checkmark-circle" size={20} color="#0A3728" />
-              <Text style={s.saveBtnText}>Save & Find Schemes</Text>
+              <Text style={s.saveBtnText}>{t.saveBtn}</Text>
             </>
           )}
         </TouchableOpacity>
         <TouchableOpacity style={s.skipBtn} onPress={() => router.replace("/(tabs)/home")}>
-          <Text style={s.skipText}>Skip for now</Text>
+          <Text style={s.skipText}>{t.skipBtn}</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
