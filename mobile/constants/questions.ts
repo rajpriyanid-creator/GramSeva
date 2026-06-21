@@ -5,6 +5,16 @@ export interface Question {
 }
 
 export const QUESTIONS: Record<string, Question[]> = {
+  "en-IN": [
+    { key: "state", text: "Which state do you live in?", hint: "e.g., Tamil Nadu, Karnataka, Rajasthan..." },
+    { key: "age", text: "What is your age?", hint: "e.g., 45 years" },
+    { key: "gender", text: "Are you male or female?", hint: "Male / Female" },
+    { key: "occupation", text: "What is your occupation?", hint: "Farmer, Student, Merchant, Employee..." },
+    { key: "income", text: "What is your annual income?", hint: "e.g., 72,000 Rupees" },
+    { key: "land", text: "How much land do you own?", hint: "In acres, or 0 if none" },
+    { key: "caste", text: "Which caste category do you belong to?", hint: "SC, ST, OBC, or General" },
+    { key: "bpl", text: "Do you have a BPL Ration Card?", hint: "Yes / No" },
+  ],
   "hi-IN": [
     { key: "state", text: "आप किस राज्य में रहते हैं?", hint: "उत्तर प्रदेश, तमिलनाडु, महाराष्ट्र..." },
     { key: "age", text: "आपकी उम्र क्या है?", hint: "उदाहरण: 45 साल" },

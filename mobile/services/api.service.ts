@@ -52,8 +52,8 @@ export const ApiService = {
   },
 
   // ─── Schemes ───────────────────────────────────────────────────────────
-  async getAllSchemes() {
-    const res = await api.get("/api/schemes");
+  async getAllSchemes(state?: string) {
+    const res = await api.get("/api/schemes", { params: { state } });
     return res.data;
   },
 
@@ -82,6 +82,23 @@ export const ApiService = {
   // ─── Health ────────────────────────────────────────────────────────────
   async healthCheck() {
     const res = await api.get("/health");
+    return res.data;
+  },
+
+  // ─── Eligible Schemes (Logged-in User) ─────────────────────────────────
+  async getEligibleSchemes(userId: string) {
+    const res = await api.get("/api/auth/eligible-schemes", { params: { userId } });
+    return res.data;
+  },
+
+  // ─── AI Chat ───────────────────────────────────────────────────────────
+  async chat(messages: Array<{ role: string; content: string }>, language_code?: string) {
+    const res = await api.post("/api/chat", { messages, language_code });
+    return res.data;
+  },
+
+  async getChatTTS(text: string, language_code?: string) {
+    const res = await api.post("/api/chat/tts", { text, language_code });
     return res.data;
   },
 };

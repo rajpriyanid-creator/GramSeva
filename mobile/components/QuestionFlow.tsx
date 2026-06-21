@@ -1,10 +1,11 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
+  TextInput,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Question } from "@/constants/questions";
@@ -17,6 +18,7 @@ interface Props {
   isRecording: boolean;
   loading: boolean;
   onPressRecord: () => void;
+  onSubmitText: (text: string) => void;
   language: any;
 }
 
@@ -27,10 +29,12 @@ export default function QuestionFlow({
   isRecording,
   loading,
   onPressRecord,
+  onSubmitText,
   language,
 }: Props) {
+  const [typedText, setTypedText] = useState("");
   const question = questions[currentIndex];
-  const progress = ((currentIndex) / total) * 100;
+  const progress = (currentIndex / total) * 100;
 
   return (
     <View style={styles.container}>
@@ -65,24 +69,52 @@ export default function QuestionFlow({
         <Text style={styles.hintText}>{question.hint}</Text>
       </View>
 
-      {/* Voice button */}
-      <View style={styles.micContainer}>
-        {loading ? (
-          <View style={styles.loadingBox}>
-            <ActivityIndicator size="large" color="#F5C518" />
-            <Text style={styles.loadingText}>Processing...</Text>
-          </View>
-        ) : (
-          <>
+      {/* Inputs */}
+      {loading ? (
+        <View style={styles.loadingBox}>
+          <ActivityIndicator size="large" color="#F5C518" />
+          <Text style={styles.loadingText}>Processing...</Text>
+        </View>
+      ) : (
+        <View style={styles.inputsWrapper}>
+          {/* Voice button */}
+          <View style={styles.micContainer}>
             <VoiceButton isRecording={isRecording} onPress={onPressRecord} />
             <Text style={styles.micLabel}>
               {isRecording
                 ? (language?.ui?.stopRecording || "Tap to stop")
-                : (language?.ui?.startRecording || "Tap to answer")}
+                : (language?.ui?.startRecording || "Tap to speak")}
             </Text>
-          </>
-        )}
-      </View>
+          </View>
+
+          {/* Text Input Option */}
+          <View style={styles.dividerRow}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>OR</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          <View style={styles.typeContainer}>
+            <TextInput
+              style={styles.textInput}
+              placeholder="Type your answer here..."
+              placeholderTextColor="#5a8a6a"
+              value={typedText}
+              onChangeText={setTypedText}
+            />
+            <TouchableOpacity
+              style={[styles.sendBtn, !typedText.trim() && styles.sendBtnDisabled]}
+              disabled={!typedText.trim()}
+              onPress={() => {
+                onSubmitText(typedText);
+                setTypedText("");
+              }}
+            >
+              <Ionicons name="send" size={16} color="#0A3728" />
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -105,7 +137,7 @@ const styles = StyleSheet.create({
   dots: {
     flexDirection: "row",
     gap: 6,
-    marginBottom: 32,
+    marginBottom: 24,
   },
   dot: {
     width: 8,
@@ -118,29 +150,33 @@ const styles = StyleSheet.create({
   questionCard: {
     backgroundColor: "#1A5C42",
     borderRadius: 20,
-    padding: 28,
+    padding: 24,
     alignItems: "center",
     gap: 12,
-    marginBottom: 40,
+    marginBottom: 24,
     borderWidth: 1,
     borderColor: "#2E7D5A",
   },
   questionText: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: "700",
     color: "#FFFFFF",
     textAlign: "center",
-    lineHeight: 32,
+    lineHeight: 28,
   },
   hintText: {
-    fontSize: 14,
+    fontSize: 13,
     color: "#A8D5B5",
     textAlign: "center",
     fontStyle: "italic",
   },
+  inputsWrapper: {
+    gap: 20,
+    alignItems: "stretch",
+  },
   micContainer: {
     alignItems: "center",
-    gap: 16,
+    gap: 10,
   },
   loadingBox: {
     alignItems: "center",
@@ -150,6 +186,50 @@ const styles = StyleSheet.create({
   loadingText: { color: "#A8D5B5", fontSize: 15 },
   micLabel: {
     color: "#A8D5B5",
-    fontSize: 14,
+    fontSize: 13,
+  },
+  dividerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginVertical: 4,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: "#1A5C42",
+  },
+  dividerText: {
+    color: "#A8D5B5",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  typeContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#1A5C42",
+    borderRadius: 12,
+    paddingLeft: 14,
+    paddingRight: 6,
+    paddingVertical: 6,
+    gap: 8,
+  },
+  textInput: {
+    flex: 1,
+    color: "#FFFFFF",
+    fontSize: 15,
+    paddingVertical: 6,
+  },
+  sendBtn: {
+    backgroundColor: "#F5C518",
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  sendBtnDisabled: {
+    backgroundColor: "#2E7D5A",
+    opacity: 0.5,
   },
 });

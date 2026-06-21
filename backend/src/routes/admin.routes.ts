@@ -175,13 +175,29 @@ adminRouter.post("/schemes", async (req, res) => {
 adminRouter.put("/schemes/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, benefit, ministry, type, url, active } = req.body;
+    const { name, benefit, ministry, type, url, active, states } = req.body;
 
     await runQuery(`
       MATCH (s:Scheme {id: $id})
       SET s += { name: $name, benefit: $benefit, ministry: $ministry,
                  type: $type, url: $url, active: $active }
     `, { id, name, benefit, ministry, type, url, active: active !== false });
+
+    if (states && Array.isArray(states)) {
+      // Remove old AVAILABLE_IN relations
+      await runQuery(`
+        MATCH (s:Scheme {id: $id})-[r:AVAILABLE_IN]->()
+        DELETE r
+      `, { id });
+      
+      // Create new AVAILABLE_IN relations
+      for (const st of states) {
+        await runQuery(`
+          MERGE (state:State {code: $code})
+          WITH state MATCH (s:Scheme {id: $schemeId}) MERGE (s)-[:AVAILABLE_IN]->(state)
+        `, { code: st, schemeId: id });
+      }
+    }
 
     res.json({ success: true });
   } catch (err: any) {

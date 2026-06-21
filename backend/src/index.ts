@@ -8,6 +8,7 @@ import { pdfRouter } from "./routes/pdf.routes";
 import { adminRouter } from "./routes/admin.routes";
 import { authRouter } from "./routes/auth.routes";
 import { applicationsRouter } from "./routes/applications.routes";
+import { chatRouter } from "./routes/chat.routes";
 import { neo4jDriver } from "./db/neo4j";
 import { trackTranscribe, trackFindSchemes, requestLogger } from "./middleware/analytics.middleware";
 
@@ -29,6 +30,7 @@ app.use("/api/pdf", pdfRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/auth", authRouter);
 app.use("/api/applications", applicationsRouter);
+app.use("/api/chat", chatRouter);
 
 app.get("/health", (_, res) =>
   res.json({ status: "ok", service: "GramSeva API", timestamp: new Date().toISOString() })

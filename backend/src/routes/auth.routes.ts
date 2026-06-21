@@ -173,3 +173,67 @@ authRouter.get("/me", async (req: Request, res: Response) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// ─── GET /api/auth/eligible-schemes ─────────────────────────────────────────
+authRouter.get("/eligible-schemes", async (req: Request, res: Response) => {
+  try {
+    const { userId } = req.query;
+    if (!userId) return res.status(400).json({ error: "userId is required" });
+
+    // Fetch user details from database
+    const userRes = await runQuery(`
+      MATCH (u:User {id: $userId})
+      RETURN u
+    `, { userId });
+
+    if (userRes.length === 0) return res.status(404).json({ error: "User not found" });
+    const userProfile = userRes[0].u.properties;
+
+    const ELIGIBILITY_QUERY = `
+      MATCH (s:Scheme {active: true})
+      WITH s
+      MATCH (s)-[:REQUIRES]->(c:Criteria)
+      WITH s, collect(c) AS allCriteria
+      WITH s, allCriteria,
+           [c IN allCriteria WHERE
+             (c.field = 'age_min'    AND $age            >= toFloat(c.value)) OR
+             (c.field = 'age_max'    AND $age            <= toFloat(c.value)) OR
+             (c.field = 'gender'     AND (c.value = 'ALL' OR $gender          = c.value)) OR
+             (c.field = 'state'      AND (c.value = 'ALL' OR $state           = c.value)) OR
+             (c.field = 'income_max' AND $annual_income  <= toFloat(c.value)) OR
+             (c.field = 'caste'      AND (c.value = 'ALL' OR $caste_category IN split(c.value, ','))) OR
+             (c.field = 'land_acres' AND $land_acres     <= toFloat(c.value)) OR
+             (c.field = 'bpl_card'   AND $bpl_card        = (c.value = 'true')) OR
+             (c.field = 'occupation' AND (c.value = 'ALL' OR $occupation      = c.value))
+           ] AS satisfiedCriteria
+      WHERE size(satisfiedCriteria) = size(allCriteria)
+      MATCH (s)-[:AVAILABLE_IN]->(st:State)
+      WHERE st.code = $state OR st.code = 'ALL'
+      OPTIONAL MATCH (s)-[:OFFERED_BY]->(d:Department)
+      RETURN s {
+        .id, .name, .name_hi, .name_ta, .name_te, .name_kn,
+        .name_mr, .name_bn, .benefit, .ministry, .type, .url,
+        department: CASE WHEN d IS NOT NULL THEN d { .name, .helpline, .portal } ELSE null END,
+        matched: size(satisfiedCriteria),
+        total:   size(allCriteria)
+      } AS scheme
+      ORDER BY s.name
+    `;
+
+    const results = await runQuery(ELIGIBILITY_QUERY, {
+      age: userProfile.age ? Number(userProfile.age) : 30,
+      gender: userProfile.gender || "M",
+      state: userProfile.state || "ALL",
+      annual_income: userProfile.annual_income ? Number(userProfile.annual_income) : 200000,
+      caste_category: userProfile.caste_category || "GEN",
+      land_acres: userProfile.land_acres ? Number(userProfile.land_acres) : 0,
+      bpl_card: userProfile.bpl_card === true || userProfile.bpl_card === "true",
+      occupation: userProfile.occupation || "other",
+    });
+
+    res.json({ schemes: results.map((r: any) => r.scheme) });
+  } catch (err: any) {
+    console.error("[GET /eligible-schemes]", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});

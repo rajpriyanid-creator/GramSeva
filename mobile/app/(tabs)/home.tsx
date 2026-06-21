@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -23,7 +23,7 @@ import SchemeCard from "@/components/SchemeCard";
 type Step = "intro" | "questions" | "processing" | "results";
 
 export default function HomeScreen() {
-  const { language, profile, setProfile, sessionId } = useSessionStore();
+  const { language, profile, setProfile, sessionId, user, token } = useSessionStore();
   const { setMatchedSchemes } = useSchemesStore();
   const [step, setStep] = useState<Step>("intro");
   const [currentQuestion, setCurrentQuestion] = useState(0);
@@ -33,8 +33,31 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(false);
   const recording = useRef<Audio.Recording | null>(null);
 
+  // Eligible schemes states for logged-in user
+  const [eligibleSchemes, setEligibleSchemes] = useState<any[]>([]);
+  const [fetchingEligible, setFetchingEligible] = useState(false);
+  const [levelFilter, setLevelFilter] = useState<"All" | "Central" | "State">("All");
+
   const questions =
     QUESTIONS[language?.code || "hi-IN"] || QUESTIONS["hi-IN"];
+
+  useEffect(() => {
+    if (token && user?.id) {
+      loadEligibleSchemes();
+    }
+  }, [token, user]);
+
+  const loadEligibleSchemes = async () => {
+    setFetchingEligible(true);
+    try {
+      const data = await ApiService.getEligibleSchemes(user!.id);
+      setEligibleSchemes(data.schemes || []);
+    } catch (err) {
+      console.warn("Could not load eligible schemes", err);
+    } finally {
+      setFetchingEligible(false);
+    }
+  };
 
   const startRecording = async () => {
     try {
@@ -101,6 +124,27 @@ export default function HomeScreen() {
     }
   };
 
+  const handleTextSubmit = async (text: string) => {
+    setLoading(true);
+    try {
+      const newAnswers = {
+        ...answers,
+        [questions[currentQuestion].key]: text,
+      };
+      setAnswers(newAnswers);
+
+      if (currentQuestion < questions.length - 1) {
+        setCurrentQuestion((prev) => prev + 1);
+      } else {
+        await findSchemes(newAnswers);
+      }
+    } catch (err) {
+      Alert.alert("Error", "Could not process answer.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const findSchemes = async (finalAnswers: Record<string, string>) => {
     setStep("processing");
     try {
@@ -131,7 +175,81 @@ export default function HomeScreen() {
     setSchemes([]);
   };
 
+  // Filter schemes for dashboard based on central/state level
+  const filteredEligible = eligibleSchemes.filter((s) => {
+    const isCentral = !s.states || s.states.includes("ALL") || s.states.length === 0;
+    if (levelFilter === "Central") return isCentral;
+    if (levelFilter === "State") return !isCentral;
+    return true;
+  });
+
   if (step === "intro") {
+    // If logged in, show the Dashboard!
+    if (token && user) {
+      return (
+        <SafeAreaView style={styles.container}>
+          {/* Dashboard Header */}
+          <View style={styles.dashboardHeader}>
+            <View>
+              <Text style={styles.welcomeText}>Welcome,</Text>
+              <Text style={styles.userName}>{user.name}</Text>
+              <Text style={styles.userId}>ID: {user.gramsevaId}</Text>
+            </View>
+            <View style={styles.stateBadge}>
+              <Ionicons name="location" size={16} color="#0A3728" />
+              <Text style={styles.stateBadgeText}>{user.state || "ALL"}</Text>
+            </View>
+          </View>
+
+          {/* Level Filter Chips */}
+          <View style={styles.levelFilterRow}>
+            {(["All", "Central", "State"] as const).map((lvl) => (
+              <TouchableOpacity
+                key={lvl}
+                style={[
+                  styles.levelChip,
+                  levelFilter === lvl && styles.levelChipActive,
+                ]}
+                onPress={() => setLevelFilter(lvl)}
+              >
+                <Text
+                  style={[
+                    styles.levelChipText,
+                    levelFilter === lvl && styles.levelChipTextActive,
+                  ]}
+                >
+                  {lvl === "All" ? "All Eligible" : lvl === "Central" ? "Central Govt" : "State Govt"}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* List of Eligible Schemes */}
+          {fetchingEligible ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#F5C518" />
+              <Text style={styles.loadingText}>Matching eligible schemes...</Text>
+            </View>
+          ) : filteredEligible.length === 0 ? (
+            <View style={styles.noResultsContainer}>
+              <Ionicons name="gift-outline" size={48} color="#A8D5B5" />
+              <Text style={styles.noResultsText}>No eligible schemes found.</Text>
+              <Text style={styles.noResultsSubtext}>
+                We couldn't match any schemes based on your profile. You can browse all schemes in the Schemes tab.
+              </Text>
+            </View>
+          ) : (
+            <ScrollView contentContainerStyle={styles.scrollContent}>
+              <Text style={styles.sectionHeader}>Matches based on your profile ({filteredEligible.length})</Text>
+              {filteredEligible.map((scheme) => (
+                <SchemeCard key={scheme.id} scheme={scheme} language={language} />
+              ))}
+            </ScrollView>
+          )}
+        </SafeAreaView>
+      );
+    }
+
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.introContainer}>
@@ -217,6 +335,7 @@ export default function HomeScreen() {
         isRecording={isRecording}
         loading={loading}
         onPressRecord={isRecording ? stopRecording : startRecording}
+        onSubmitText={handleTextSubmit}
         language={language}
       />
     </SafeAreaView>
@@ -225,6 +344,54 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#0A3728" },
+  dashboardHeader: {
+    padding: 20,
+    backgroundColor: "#1A5C42",
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    elevation: 3,
+  },
+  welcomeText: { color: "#A8D5B5", fontSize: 13 },
+  userName: { color: "#FFFFFF", fontSize: 20, fontWeight: "700", marginVertical: 2 },
+  userId: { color: "#F5C518", fontSize: 12, fontWeight: "600" },
+  stateBadge: {
+    backgroundColor: "#F5C518",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  stateBadgeText: { color: "#0A3728", fontWeight: "700", fontSize: 12 },
+  levelFilterRow: {
+    flexDirection: "row",
+    paddingHorizontal: 16,
+    gap: 8,
+    marginVertical: 14,
+  },
+  levelChip: {
+    flex: 1,
+    backgroundColor: "#1A5C42",
+    borderRadius: 20,
+    paddingVertical: 8,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "transparent",
+  },
+  levelChipActive: { borderColor: "#F5C518", backgroundColor: "#235D40" },
+  levelChipText: { color: "#A8D5B5", fontSize: 12, fontWeight: "600" },
+  levelChipTextActive: { color: "#F5C518" },
+  sectionHeader: {
+    color: "#A8D5B5",
+    fontSize: 13,
+    fontWeight: "700",
+    paddingHorizontal: 16,
+    marginBottom: 8,
+  },
   introContainer: {
     flex: 1,
     justifyContent: "center",
@@ -293,4 +460,11 @@ const styles = StyleSheet.create({
     color: "#A8D5B5",
     textAlign: "center",
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 16,
+  },
+  loadingText: { color: "#A8D5B5", fontSize: 15 },
 });

@@ -226,6 +226,48 @@ export default function SchemesPage() {
               onChange={e => setForm({ ...form, department: { ...(form.department||{}), helpline: e.target.value } })}
               placeholder="1800-180-1551" />
           </FormRow>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
+            <FormRow label="Scheme Level">
+              <select
+                style={{ width: "100%" }}
+                value={form.states?.includes("ALL") ? "central" : "state"}
+                onChange={e => {
+                  if (e.target.value === "central") {
+                    setForm({ ...form, states: ["ALL"] });
+                  } else {
+                    setForm({ ...form, states: ["TN"] });
+                  }
+                }}
+              >
+                <option value="central">Central Government</option>
+                <option value="state">State Government</option>
+              </select>
+            </FormRow>
+            {!form.states?.includes("ALL") && (
+              <FormRow label="State Jurisdiction">
+                <select
+                  style={{ width: "100%" }}
+                  value={form.states?.[0] || "TN"}
+                  onChange={e => setForm({ ...form, states: [e.target.value] })}
+                >
+                  <option value="TN">Tamil Nadu (TN)</option>
+                  <option value="UP">Uttar Pradesh (UP)</option>
+                  <option value="MH">Maharashtra (MH)</option>
+                  <option value="AP">Andhra Pradesh (AP)</option>
+                  <option value="TS">Telangana (TS)</option>
+                  <option value="KA">Karnataka (KA)</option>
+                  <option value="KL">Kerala (KL)</option>
+                  <option value="WB">West Bengal (WB)</option>
+                  <option value="RJ">Rajasthan (RJ)</option>
+                  <option value="GJ">Gujarat (GJ)</option>
+                  <option value="MP">Madhya Pradesh (MP)</option>
+                  <option value="BR">Bihar (BR)</option>
+                  <option value="OD">Odisha (OD)</option>
+                  <option value="PB">Punjab (PB)</option>
+                </select>
+              </FormRow>
+            )}
+          </div>
           <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8, paddingTop: 16, borderTop: "1px solid var(--border)" }}>
             <Btn variant="outline" onClick={() => { setEdit(null); setCreating(false); }}>Cancel</Btn>
             <Btn loading={saving} onClick={handleSave}>Save Scheme</Btn>

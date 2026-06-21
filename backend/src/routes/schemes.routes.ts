@@ -5,14 +5,16 @@ export const schemesRouter = Router();
 
 // ─── GET /api/schemes ─────────────────────────────────────────────────────
 // Returns all active schemes with their department and criteria counts.
-schemesRouter.get("/", async (_req: Request, res: Response) => {
+schemesRouter.get("/", async (req: Request, res: Response) => {
   try {
+    const { state } = req.query;
     const results = await runQuery(`
       MATCH (s:Scheme {active: true})
       OPTIONAL MATCH (s)-[:OFFERED_BY]->(d:Department)
       OPTIONAL MATCH (s)-[:REQUIRES]->(c:Criteria)
       OPTIONAL MATCH (s)-[:AVAILABLE_IN]->(st:State)
       WITH s, d, count(DISTINCT c) AS ccount, collect(DISTINCT st.code) AS states
+      WHERE $state IS NULL OR 'ALL' IN states OR $state IN states
       RETURN s {
         .id, .name, .name_hi, .name_ta, .name_te, .name_kn,
         .name_mr, .name_bn, .benefit, .ministry, .type, .url,
@@ -21,7 +23,7 @@ schemesRouter.get("/", async (_req: Request, res: Response) => {
         states: states
       } AS scheme
       ORDER BY s.name
-    `);
+    `, { state: state || null });
 
     res.json({
       schemes: (results as any[]).map((r: any) => ({
