@@ -1,245 +1,168 @@
 # 🌿 GramSeva — Voice-First Government Scheme Navigator
 
-> *"Every Indian citizen deserves to know what the government is giving them."*
+> **"Bridging the digital divide so every citizen can discover and claim their welfare benefits."**
 
-GramSeva is a voice-first mobile app that helps rural Indians discover government welfare schemes they qualify for — in their own language, with no literacy or internet required during the actual interaction. Built for HACKHAZARDS '26.
+GramSeva is a voice-first mobile application designed to help rural Indians discover government welfare schemes they qualify for in their native language. By utilizing conversational voice inputs, GramSeva makes complex policy details accessible to anyone—regardless of written literacy—and guides them directly to their nearest Common Service Centre (CSC) for physical application submission.
 
 ---
 
-## 🏆 Hackathon Tracks
+## 🌐 Live Deployments
 
-| Track | Integration |
-|-------|-------------|
-| **Expo (Mobile)** | React Native / Expo Router mobile app |
-| **Neo4j / AuraDB** | Graph DB for eligibility traversal across 500+ schemes |
-| **Base44** | Render-hosted backend + scheduled scheme sync pipeline |
+*   **Admin Dashboard (Operations Portal):** [https://gramseva-admin.onrender.com/](https://gramseva-admin.onrender.com/)
+*   **Production Backend API Endpoint:** [https://gramseva-api-c102.onrender.com/](https://gramseva-api-c102.onrender.com/)
+*   **API Health Status:** [https://gramseva-api-c102.onrender.com/health](https://gramseva-api-c102.onrender.com/health)
+
+---
+
+## 💡 How GramSeva is Useful (Social Impact & Utility)
+
+Rural citizens face significant barriers when attempting to access welfare benefits:
+1. **Written Literacy & Language Barriers**: Most government portals are text-heavy and published in official formats that can be difficult to interpret. GramSeva resolves this by supporting **10 major Indian languages** using a voice-only onboarding flow.
+2. **Complex Eligibility Rules**: Determining if one qualifies for a scheme involves traversing multiple overlapping parameters (e.g., age thresholds, caste categories, income caps, land holdings, and state of residence). GramSeva parses conversation speech, builds an profile vector, and runs a mathematical graph match in milliseconds.
+3. **The "Double-Trip" Document Problem**: Rural residents often travel to government offices only to be turned away because they are missing a specific document. GramSeva generates a downloadable **PDF Document Checklist** containing the exact IDs and certificates required based on their personal profile.
+4. **Physical Submission Assist**: Citizens can find nearby physical **Common Service Centres (CSCs)** using GPS geolocation, complete with operating hours, phone numbers, and navigation details.
+
+---
+
+## 🏗 Key Technology Highlights
+
+### 1. 🌿 Neo4j & AuraDB (Decentralized Decision Graph)
+Traditional relational databases struggle to scale when querying highly nested, conditional eligibility rules. GramSeva maps eligibility rules as a graph:
+* **The Model**: `(:Scheme)-[:OFFERED_BY]->(:Department)`, `(:Scheme)-[:REQUIRES]->(:Criteria)`, and `(:Scheme)-[:AVAILABLE_IN]->(:State)`.
+* **Traversals**: A single Cypher query evaluates dozens of criteria nodes simultaneously, returning qualifying schemes immediately without needing complex relational joins.
+* **Geospatial Queries**: Uses Neo4j's spatial indexing to compute distances to CSC centers instantly via point-to-point distance formulas:
+  ```cypher
+  MATCH (c:CSC)
+  WITH c, point.distance(
+    point({latitude: c.lat, longitude: c.lng}),
+    point({latitude: $user_lat, longitude: $user_lng})
+  ) AS distance_m
+  ORDER BY distance_m ASC LIMIT 5
+  RETURN c, distance_m
+  ```
+
+### 2. 📱 Expo & React Native (Adaptive Mobile Interface)
+* **Voice Recording Integration**: Captures native high-quality audio files directly on device and submits them to the backend speech-to-text pipeline.
+* **Adaptive Screen Scaling**: The user interface automatically scales and shifts layouts whenever the soft keyboard is toggled to ensure key inputs remain clear and accessible.
+* **Zustand State Store**: Manages user profiles, speech transcripts, matched schemes, and offline local cache values.
+
+### 3. ☁️ Render Deployment (Free Tier Optimization)
+* **Unified Blueprint Deployment**: Built using a unified `render.yaml` template to orchestrate the Node.js API Web Service and the Vite React Admin static portal.
+* **Production Overrides**: Configured with production overrides (`NODE_ENV=development` inline) to fetch devDependencies like TypeScript type definitions during build time while keeping runtime dependencies lightweight.
 
 ---
 
 ## 🗂 Project Structure
 
-```
+```text
 gramseva/
-├── mobile/                     # Expo React Native app
+├── mobile/                     # Expo React Native App
 │   ├── app/
-│   │   ├── _layout.tsx         # Root stack navigator
-│   │   ├── index.tsx           # Language selector (entry screen)
-│   │   ├── (tabs)/
-│   │   │   ├── _layout.tsx     # Bottom tab bar
-│   │   │   ├── home.tsx        # Voice query flow
-│   │   │   ├── schemes.tsx     # Browse all schemes
-│   │   │   ├── results.tsx     # My matched schemes
-│   │   │   └── csc.tsx         # Find nearby CSC centres
-│   │   └── scheme/[id].tsx     # Scheme detail + PDF download
-│   ├── components/             # Reusable UI components
-│   ├── services/               # API, Audio, Cache services
-│   ├── store/                  # Zustand global state
-│   └── constants/              # Languages (10) + Questions
+│   │   ├── _layout.tsx         # Root Stack Navigator
+│   │   ├── index.tsx           # Language Selector (entry screen)
+│   │   └── (tabs)/             # Tab Navigation (Home, Schemes, Results, Profile)
+│   ├── components/             # Custom UI Cards, Voice Buttons
+│   ├── services/               # STT, Audio, and Storage Services
+│   └── store/                  # Zustand Store for State Management
 │
-├── backend/                    # Node.js / Express / TypeScript API
-│   └── src/
-│       ├── index.ts            # Server entry
-│       ├── db/neo4j.ts         # Neo4j AuraDB driver
-│       ├── routes/
-│       │   ├── eligibility.routes.ts   # STT → NLP → Neo4j match
-│       │   ├── schemes.routes.ts       # Browse / search schemes
-│       │   ├── csc.routes.ts           # Geospatial CSC lookup
-│       │   └── pdf.routes.ts           # PDF checklist generation
-│       └── services/
-│           └── sarvam.service.ts       # Sarvam AI STT/TTS/Translate
+├── backend/                    # Express Node.js & TypeScript Server
+│   ├── src/
+│   │   ├── index.ts            # Main API Entry
+│   │   ├── db/neo4j.ts         # AuraDB Connection Driver
+│   │   ├── routes/             # API routes (schemes, eligibility, csc, pdf)
+│   │   └── services/           # Analytics & Sarvam AI Translation integration
+│   └── package.json            # Scripts & dependencies
 │
-├── render-workflows/           # Nightly sync pipeline
-│   ├── scheme-sync.yaml        # Render cron job definition
-│   └── scripts/
-│       ├── fetch-myscheme.js   # Pull schemes from MyScheme API
-│       ├── parse-scheme-pdfs.js # Normalise & extract criteria
-│       ├── update-neo4j.js     # Upsert schemes into AuraDB
-│       ├── fetch-csc.js        # Pull CSC locations
-│       ├── update-csc-neo4j.js # Upsert CSCs with geospatial data
-│       ├── validate-graph.js   # Post-sync integrity checks
-│       └── notify-failure.js   # Slack alert on failure
+├── admin/                      # Admin Operations Portal (Vite React Site)
+│   ├── src/
+│   │   ├── pages/              # Dashboard, Analytics, Graph, Applications
+│   │   ├── services/api.ts     # Axios connection manager
+│   │   └── tsconfig.json       # Type Declarations (vite/client)
+│   └── index.html              # Entry HTML
 │
-├── neo4j/
-│   ├── constraints.cypher      # Unique + not-null constraints
-│   ├── indexes.cypher          # Full-text + spatial indexes
-│   └── seed.cypher             # 15 real schemes + sample CSCs
-│
-└── render.yaml                 # Render deployment config
+└── render.yaml                 # Render Deployment Blueprints
 ```
 
 ---
 
-## ⚡ Quick Start
+## 🚀 Quick Start Guide
 
 ### Prerequisites
+* Node.js v20+
+* Neo4j AuraDB Database (Free tier available at [neo4j.com](https://neo4j.com/cloud/platform/auradb/))
+* Sarvam AI API Key ([sarvam.ai](https://www.sarvam.ai/))
 
-- Node.js 20+
-- Neo4j AuraDB account (free tier works)
-- Sarvam AI API key → [sarvam.ai](https://sarvam.ai)
-- Expo Go app (Android/iOS) or Android emulator
-
-### 1. Backend Setup
-
+### 1. Setup Backend
 ```bash
 cd backend
 cp .env.example .env
 # Fill in NEO4J_URI, NEO4J_USERNAME, NEO4J_PASSWORD, SARVAM_API_KEY
-
 npm install
-npm run dev        # Starts on http://localhost:3000
+npm run dev
 ```
 
-### 2. Neo4j Setup
-
-In your AuraDB console → Open with Neo4j Browser → run in order:
-
-```cypher
-:source neo4j/constraints.cypher
-:source neo4j/indexes.cypher
-:source neo4j/seed.cypher
-```
-
-Or using cypher-shell:
+### 2. Setup database Seed
+To populate all 36 Indian states, national schemes, state-specific welfare pension schemes, and mock profiles:
 ```bash
-cypher-shell -a $NEO4J_URI -u $NEO4J_USERNAME -p $NEO4J_PASSWORD -f neo4j/constraints.cypher
-cypher-shell -a $NEO4J_URI -u $NEO4J_USERNAME -p $NEO4J_PASSWORD -f neo4j/indexes.cypher
-cypher-shell -a $NEO4J_URI -u $NEO4J_USERNAME -p $NEO4J_PASSWORD -f neo4j/seed.cypher
+npm run seed
 ```
 
-### 3. Mobile Setup
+### 3. Run Admin Portal
+```bash
+cd admin
+npm install
+npm run dev
+```
 
+### 4. Run Mobile App (Expo)
 ```bash
 cd mobile
 cp .env.example .env
-# Set EXPO_PUBLIC_API_URL=http://your-machine-ip:3000
-
+# Set EXPO_PUBLIC_API_URL=http://<your-machine-ip>:3000
 npm install
 npx expo start
-# Scan QR code with Expo Go
 ```
+Scan the QR code in your terminal with the Expo Go app on your phone.
 
 ---
 
-## 🧠 Neo4j Graph Model
+## 🌐 API Reference
 
-```
-(:Scheme)-[:OFFERED_BY]->(:Department)
-(:Scheme)-[:REQUIRES]->(:Criteria)
-(:Scheme)-[:AVAILABLE_IN]->(:State)
-(:CSC)-[:LOCATED_IN]->(:District)-[:PART_OF]->(:State)
-```
-
-### Eligibility Query Pattern
-
-The core eligibility traversal matches a user's profile against ALL criteria of a scheme simultaneously:
-
-```cypher
-MATCH (s:Scheme {active: true})-[:REQUIRES]->(c:Criteria)
-WITH s, collect(c) AS allCriteria
-WITH s, allCriteria,
-     [c IN allCriteria WHERE
-       (c.field = 'age_min'    AND $age >= toFloat(c.value)) OR
-       (c.field = 'income_max' AND $income <= toFloat(c.value)) OR
-       ...
-     ] AS satisfiedCriteria
-WHERE size(satisfiedCriteria) = size(allCriteria)
-RETURN s
-```
-
-### Geospatial CSC Query
-
-```cypher
-MATCH (c:CSC)
-WITH c, point.distance(
-  point({latitude: c.lat, longitude: c.lng}),
-  point({latitude: $user_lat, longitude: $user_lng})
-) AS distance_m
-ORDER BY distance_m ASC LIMIT 5
-```
-
----
-
-## 🌐 API Endpoints
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET`  | `/health` | Service health check |
-| `POST` | `/api/eligibility/transcribe` | STT → transcript + confirmation TTS |
-| `POST` | `/api/eligibility/find-schemes` | Profile extraction + Neo4j match |
-| `GET`  | `/api/schemes` | All active schemes |
-| `GET`  | `/api/schemes/:id` | Single scheme detail |
-| `GET`  | `/api/csc/nearby?lat=&lng=&state=` | Nearest CSC centres |
-| `GET`  | `/api/pdf/checklist/:id` | Download document checklist PDF |
-| `POST` | `/api/pdf/summary` | Download matched-schemes summary PDF |
+| Method | Path | Function |
+|--------|------|----------|
+| `GET`  | `/health` | API service health verification |
+| `POST` | `/api/eligibility/transcribe` | Decodes voice recording files via Sarvam AI STT |
+| `POST` | `/api/eligibility/find-schemes` | Traverses Neo4j database to match qualifying schemes |
+| `GET`  | `/api/schemes` | Lists all active welfare schemes |
+| `GET`  | `/api/csc/nearby` | Queries closest physical CSC locations |
+| `GET`  | `/api/pdf/checklist/:id` | Downloads document checklist PDF for a scheme |
+| `POST` | `/api/pdf/summary` | Generates a 1-page summary PDF of matched schemes |
 
 ---
 
 ## 🗣 Supported Languages
 
-| Language | Sarvam Code | States |
-|----------|-------------|--------|
-| हिन्दी (Hindi) | `hi-IN` | UP, MP, RJ, HR, DL, BR… |
-| தமிழ் (Tamil) | `ta-IN` | TN, PY |
-| తెలుగు (Telugu) | `te-IN` | AP, TS |
-| ಕನ್ನಡ (Kannada) | `kn-IN` | KA |
-| मराठी (Marathi) | `mr-IN` | MH |
-| বাংলা (Bengali) | `bn-IN` | WB |
-| ગુજરાતી (Gujarati) | `gu-IN` | GJ |
-| മലയാളം (Malayalam) | `ml-IN` | KL |
-| ଓଡ଼ିଆ (Odia) | `or-IN` | OD |
-| ਪੰਜਾਬੀ (Punjabi) | `pa-IN` | PB |
+| Language | Sarvam Code | Coverage |
+|----------|-------------|----------|
+| हिन्दी (Hindi) | `hi-IN` | North/Central India |
+| தமிழ் (Tamil) | `ta-IN` | Tamil Nadu & Puducherry |
+| తెలుగు (Telugu) | `te-IN` | Andhra Pradesh & Telangana |
+| ಕನ್ನಡ (Kannada) | `kn-IN` | Karnataka |
+| मराठी (Marathi) | `mr-IN` | Maharashtra |
+| বাংলা (Bengali) | `bn-IN` | West Bengal |
+| ગુજરાતી (Gujarati) | `gu-IN` | Gujarat |
+| മലയാളം (Malayalam) | `ml-IN` | Kerala |
+| ଓଡ଼ିଆ (Odia) | `or-IN` | Odisha |
+| ਪੰਜਾਬੀ (Punjabi) | `pa-IN` | Punjab |
 
 ---
 
-## 🚀 Deployment (Render)
-
-1. Push to GitHub
-2. Connect repo to Render
-3. Render auto-reads `render.yaml` — creates web service + cron job
-4. Set env vars in Render dashboard (NEO4J_*, SARVAM_API_KEY, DATA_GOV_API_KEY)
-5. Mobile: `EXPO_PUBLIC_API_URL=https://gramseva-api.onrender.com npx expo build`
-
-The nightly cron (1 AM IST) auto-fetches MyScheme.gov.in and refreshes the graph.
-
----
-
-## 📲 User Flow
-
-```
-Language Select → Voice Question 1-8 → STT (Sarvam)
-  → Entity Extraction → Neo4j Eligibility Query
-    → Matched Schemes → TTS Summary
-      → Scheme Detail → PDF Checklist Download
-        → Find Nearest CSC → Directions / Call
-```
-
----
-
-## 🛠 Tech Stack
-
-| Layer | Technology |
-|-------|-----------|
-| Mobile | Expo 53 / React Native 0.76 / Expo Router 4 |
-| State | Zustand + AsyncStorage |
-| Backend | Node.js 20 / Express / TypeScript |
-| Graph DB | Neo4j AuraDB (Free tier) |
-| STT / TTS | Sarvam AI (`saarika:v1`, `bulbul:v1`) |
-| Translation | Sarvam AI (`mayura:v1`) |
-| PDF | PDFKit |
-| Deploy | Render (Web Service + Cron) |
-| Offline Cache | Expo SQLite |
-
----
-
-## 🔒 Privacy
-
-- **No login required**
-- Voice data is processed by Sarvam AI and **never stored** by GramSeva
-- User profile exists only in the current session (not persisted to any DB)
-- Session ID is UUID-based and ephemeral
+## 🔒 Privacy & Data Policy
+* **No Authentication Required**: Rural users can search for schemes without sharing any private personal identification records.
+* **Ephemeral Sessions**: Personal profiles (age, income, etc.) reside entirely in local device states and are never saved permanently to external databases.
+* **Audio Handling**: Voice recording packets are immediately transcribed using secure, stateless translation APIs and are never stored.
 
 ---
 
 ## 📄 License
-
-MIT — Built for HACKHAZARDS '26
+Distributed under the MIT License. Built for **HACKHAZARDS '26**.
