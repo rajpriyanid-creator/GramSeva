@@ -538,18 +538,18 @@ adminRouter.get("/health", async (_req, res) => {
 // ════════════════════════════════════════════════════════════════════════════
 // ANALYTICS
 // ════════════════════════════════════════════════════════════════════════════
-adminRouter.get("/analytics/overview",   (_req, res) => res.json(analyticsService.getOverview()));
-adminRouter.get("/analytics/timeline",   (_req, res) => res.json({ timeline: analyticsService.getTimeline(30) }));
-adminRouter.get("/analytics/hourly",     (_req, res) => res.json({ hourly: analyticsService.getHourlyTimeline() }));
-adminRouter.get("/analytics/languages",  (_req, res) => res.json({ languages: analyticsService.getLanguageDistribution() }));
-adminRouter.get("/analytics/states",     (_req, res) => res.json({ states: analyticsService.getStateDistribution() }));
-adminRouter.get("/analytics/top-schemes",(_req, res) => res.json({ schemes: analyticsService.getTopSchemes(15) }));
-adminRouter.get("/analytics/sessions",   (_req, res) => res.json({ sessions: analyticsService.getRecentSessions(30) }));
+adminRouter.get("/analytics/overview",   (_req: Request, res: Response) => res.json(analyticsService.getOverview()));
+adminRouter.get("/analytics/timeline",   (_req: Request, res: Response) => res.json({ timeline: analyticsService.getTimeline(30) }));
+adminRouter.get("/analytics/hourly",     (_req: Request, res: Response) => res.json({ hourly: analyticsService.getHourlyTimeline() }));
+adminRouter.get("/analytics/languages",  (_req: Request, res: Response) => res.json({ languages: analyticsService.getLanguageDistribution() }));
+adminRouter.get("/analytics/states",     (_req: Request, res: Response) => res.json({ states: analyticsService.getStateDistribution() }));
+adminRouter.get("/analytics/top-schemes",(_req: Request, res: Response) => res.json({ schemes: analyticsService.getTopSchemes(15) }));
+adminRouter.get("/analytics/sessions",   (_req: Request, res: Response) => res.json({ sessions: analyticsService.getRecentSessions(30) }));
 
 // ════════════════════════════════════════════════════════════════════════════
 // TRIGGER SYNC
 // ════════════════════════════════════════════════════════════════════════════
-adminRouter.post("/sync/trigger", async (_req, res) => {
+adminRouter.post("/sync/trigger", async (_req: Request, res: Response) => {
   // In production this would invoke the Render cron via API or run a job queue
   res.json({
     success: true,
