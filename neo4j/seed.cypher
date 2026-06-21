@@ -498,4 +498,101 @@ MERGE (csc5:CSC {id:'CSC_TS_001'})
                timings:'Mon–Sat 9am–7pm', lat:17.3850, lng:78.4867};
 MATCH (csc5:CSC {id:'CSC_TS_001'}), (d:District {id:'DIST_HYD'}) MERGE (csc5)-[:LOCATED_IN]->(d);
 
+// ── 5. Add All remaining States & UTs ─────────────────────────────────────────
+MERGE (s_ap:State {code:'AP'}) SET s_ap.name = 'Andhra Pradesh';
+MERGE (s_ar:State {code:'AR'}) SET s_ar.name = 'Arunachal Pradesh';
+MERGE (s_as:State {code:'AS'}) SET s_as.name = 'Assam';
+MERGE (s_br:State {code:'BR'}) SET s_br.name = 'Bihar';
+MERGE (s_cg:State {code:'CG'}) SET s_cg.name = 'Chhattisgarh';
+MERGE (s_ga:State {code:'GA'}) SET s_ga.name = 'Goa';
+MERGE (s_gj:State {code:'GJ'}) SET s_gj.name = 'Gujarat';
+MERGE (s_hr:State {code:'HR'}) SET s_hr.name = 'Haryana';
+MERGE (s_hp:State {code:'HP'}) SET s_hp.name = 'Himachal Pradesh';
+MERGE (s_jh:State {code:'JH'}) SET s_jh.name = 'Jharkhand';
+MERGE (s_ka:State {code:'KA'}) SET s_ka.name = 'Karnataka';
+MERGE (s_kl:State {code:'KL'}) SET s_kl.name = 'Kerala';
+MERGE (s_mp:State {code:'MP'}) SET s_mp.name = 'Madhya Pradesh';
+MERGE (s_mh:State {code:'MH'}) SET s_mh.name = 'Maharashtra';
+MERGE (s_mn:State {code:'MN'}) SET s_mn.name = 'Manipur';
+MERGE (s_ml:State {code:'ML'}) SET s_ml.name = 'Meghalaya';
+MERGE (s_mz:State {code:'MZ'}) SET s_mz.name = 'Mizoram';
+MERGE (s_nl:State {code:'NL'}) SET s_nl.name = 'Nagaland';
+MERGE (s_od:State {code:'OD'}) SET s_od.name = 'Odisha';
+MERGE (s_pb:State {code:'PB'}) SET s_pb.name = 'Punjab';
+MERGE (s_rj:State {code:'RJ'}) SET s_rj.name = 'Rajasthan';
+MERGE (s_sk:State {code:'SK'}) SET s_sk.name = 'Sikkim';
+MERGE (s_tn:State {code:'TN'}) SET s_tn.name = 'Tamil Nadu';
+MERGE (s_ts:State {code:'TS'}) SET s_ts.name = 'Telangana';
+MERGE (s_tr:State {code:'TR'}) SET s_tr.name = 'Tripura';
+MERGE (s_up:State {code:'UP'}) SET s_up.name = 'Uttar Pradesh';
+MERGE (s_uk:State {code:'UK'}) SET s_uk.name = 'Uttarakhand';
+MERGE (s_wb:State {code:'WB'}) SET s_wb.name = 'West Bengal';
+MERGE (s_dl:State {code:'DL'}) SET s_dl.name = 'Delhi';
+MERGE (s_jk:State {code:'JK'}) SET s_jk.name = 'Jammu & Kashmir';
+MERGE (s_la:State {code:'LA'}) SET s_la.name = 'Ladakh';
+MERGE (s_an:State {code:'AN'}) SET s_an.name = 'Andaman & Nicobar';
+MERGE (s_ch:State {code:'CH'}) SET s_ch.name = 'Chandigarh';
+MERGE (s_dn:State {code:'DN'}) SET s_dn.name = 'Dadra & Nagar Haveli';
+MERGE (s_dd:State {code:'DD'}) SET s_dd.name = 'Daman & Diu';
+MERGE (s_ld:State {code:'LD'}) SET s_ld.name = 'Lakshadweep';
+MERGE (s_py:State {code:'PY'}) SET s_py.name = 'Puducherry';
+
+// ── 6. State Specific Welfare Schemes for Every State ──────────────────────────
+UNWIND [
+  {code:'AP', name:'Andhra Pradesh YSR Pension Kanuka', name_hi:'आंध्र प्रदेश वाईएसआर पेंशन कनुका', name_ta:'ஆந்திரா ஒய்.எஸ்.ஆர் ஓய்வூதியக் காணிக்கை', benefit:'₹3,000/month pension support for senior citizens, widows, and disabled'},
+  {code:'AR', name:'Arunachal Pradesh Old Age Pension', name_hi:'अरुणाचल प्रदेश वृद्धावस्था पेंशन', name_ta:'அருணோச்சல பிரதேச முதியோர் ஓய்வூதியம்', benefit:'₹1,500/month for senior citizens above 60 years'},
+  {code:'AS', name:'Assam Orunodoi Scheme', name_hi:'असम अरुणोदय योजना', name_ta:'அசாம் அருணோதய் திட்டம்', benefit:'₹1,250/month direct cash assistance to female heads of households'},
+  {code:'BR', name:'Bihar Mukhyamantri Vriddhjan Pension', name_hi:'बिहार मुख्यमंत्री वृद्धजन पेंशन योजना', name_ta:'பீகார் முதியோர் ஓய்வூதியத் திட்டம்', benefit:'₹400-500/month pension for elderly people above 60 years'},
+  {code:'CG', name:'Chhattisgarh Rajiv Gandhi Kisaan Nyay Yojana', name_hi:'छत्तीसगढ़ राजीव गांधी किसान न्याय योजना', name_ta:'சத்தீஸ்கர் ராஜீவ் காந்தி கிசான் நியாய திட்டம்', benefit:'₹9,000/acre input subsidy for crop cultivation support'},
+  {code:'GA', name:'Goa Dayanand Social Security Scheme', name_hi:'गोवा दयानंद सामाजिक सुरक्षा योजना', name_ta:'கோவா தயானந்த் சமூக பாதுகாப்புத் திட்டம்', benefit:'₹2,000/month for senior citizens and single mothers'},
+  {code:'GJ', name:'Gujarat Mukhyamantri Kisan Sahay Yojana', name_hi:'गुजरात मुख्यमंत्री किसान सहाय योजना', name_ta:'குஜராத் முதல்வர் கிசான் சகாய் யோஜனா', benefit:'₹20,000/hectare assistance for crop loss due to heavy rain'},
+  {code:'HR', name:'Haryana Old Age Samman Allowance', name_hi:'हरियाणा वृद्धावस्था सम्मान भत्ता', name_ta:'ஹரியானா முதியோர் உதவித்தொகை', benefit:'₹2,750/month pension for senior citizens above 60 years'},
+  {code:'HP', name:'Himachal Pradesh Sahara Yojana', name_hi:'हिमाचल प्रदेश सहारा योजना', name_ta:'இமாச்சல பிரதேச சஹாரா யோஜனா', benefit:'₹3,000/month financial assistance for patients with critical illnesses'},
+  {code:'JH', name:'Jharkhand Mukhyamantri Sarvajan Pension', name_hi:'झारखंड मुख्यमंत्री सार्वजन पेंशन', name_ta:'ஜார்கண்ட் முதல்வர் பொது ஓய்வூதியத் திட்டம்', benefit:'₹1,000/month universal pension for all senior citizens'},
+  {code:'KA', name:'Karnataka Gruha Lakshmi Scheme', name_hi:'कर्नाटक गृह लक्ष्मी योजना', name_ta:'கர்நாடகா கிருக லட்சுமி திட்டம்', benefit:'₹2,000/month financial support to female heads of families'},
+  {code:'KL', name:'Kerala Karunya Benevolent Fund', name_hi:'केरल कारुण्या बेनेवोलेंट फंड', name_ta:'கேரளா காருண்யா நல நிதித் திட்டம்', benefit:'Up to ₹3 lakh free medical treatment support for poor families'},
+  {code:'MP', name:'MP Ladli Behna Yojana', name_hi:'मध्य प्रदेश लाड़ली बहना योजना', name_ta:'மத்திய பிரதேச லாட்லி பெஹ்னா யோஜனா', benefit:'₹1,250/month direct cash benefit for eligible women'},
+  {code:'MH', name:'Maharashtra Ladli Behna Yojana', name_hi:'महाराष्ट्र लाड़ली बहना योजना', name_ta:'மகாராஷ்டிரா லாட்லி பெஹ்னா யோஜனா', benefit:'₹1,500/month assistance for low-income women aged 21-65'},
+  {code:'MN', name:'Manipur Chief Ministergi Hakshelgi Tengbang', name_hi:'मणिपुर मुख्यमंत्री हक्शेलगी तेंगबांग', name_ta:'மணிப்பூர் முதல்வர் மருத்துவ உதவித் திட்டம்', benefit:'₹2 lakh cashless medical cover per year for poor families'},
+  {code:'ML', name:'Meghalaya FOCUS Scheme', name_hi:'मेघालय फोकस योजना', name_ta:'மேகாலயா போக்கஸ் திட்டம்', benefit:'₹5,000 direct financial support to producer households/farmers'},
+  {code:'MZ', name:'Mizoram Health Care Scheme', name_hi:'मिजोरम स्वास्थ्य देखभाल योजना', name_ta:'மிஸோரம் சுகாதாரப் பாதுகாப்புத் திட்டம்', benefit:'Up to ₹2 lakh health insurance support per family annually'},
+  {code:'NL', name:'Nagaland State Disability Pension', name_hi:'नागालैंड राज्य विकलांगता पेंशन', name_ta:'நாகாலாந்து மாநில மாற்றுத்திறனாளிகள் ஓய்வூதியம்', benefit:'₹1,000/month social security pension for disabled individuals'},
+  {code:'OD', name:'Odisha Madhu Babu Pension Yojana', name_hi:'ओडिशा मधु बाबू पेंशन योजना', name_ta:'ஒடிசா மது பாபு ஓய்வூதிய யோஜனா', benefit:'₹500-900/month social security pension for elderly and widows'},
+  {code:'PB', name:'Punjab Mai Bhago Chhatri Scheme', name_hi:'पंजाब माई भागो छात्र योजना', name_ta:'பஞ்சாப் மாய் பாகோ கல்வித் திட்டம்', benefit:'Free school transportation and bicycle distribution for girl students'},
+  {code:'RJ', name:'Rajasthan Chiranjeevi Swasthya Bima', name_hi:'राजस्थान चिरंजीवी स्वास्थ्य बीमा योजना', name_ta:'ராஜஸ்தான் சிரஞ்சீவி காப்பீட்டுத் திட்டம்', benefit:'₹25 lakh/year cashless family health insurance cover'},
+  {code:'SK', name:'Sikkim Aama Yojana', name_hi:'सिक्किम आमा योजना', name_ta:'சிக்கிம் ஆமா யோஜனா', benefit:'₹20,000/year financial assistance to all unemployed mothers'},
+  {code:'TN', name:'Tamil Nadu Pudhumai Penn Scheme', name_hi:'தமிழ்நாடு புதுமைப் பெண் திட்டம்', name_ta:'தமிழ்நாடு புதுமைப் பெண் திட்டம்', benefit:'₹1,000/month to girls who studied in govt schools for higher education'},
+  {code:'TS', name:'Telangana Rythu Bandhu Scheme', name_hi:'तेलंगाना रायथू बंधु योजना', name_ta:'தெலுங்கானா రైతు பந்து திட்டம்', benefit:'₹10,000/acre per year investment support for agriculture'},
+  {code:'TR', name:'Tripura Mukhyamantri Chaa Sramik Kalyan Prakalpa', name_hi:'त्रिपुरा मुख्यमंत्री चा श्रमिक कल्याण प्रकल्प', name_ta:'திரிபுரா தேயிலை தொழிலாளர் நலத் திட்டம்', benefit:'Land allotment, housing assistance, and ration subsidies for tea workers'},
+  {code:'UP', name:'UP Mukhyamantri Kanya Sumangala Yojana', name_hi:'उत्तर प्रदेश मुख्यमंत्री कन्या सुमंगला योजना', name_ta:'உத்தரபிரதேசம் கன்யா சுமங்கலா யோஜனா', benefit:'₹15,000 conditional cash transfer for education and girl welfare'},
+  {code:'UK', name:'Uttarakhand Gaura Devi Kanya Dhan Yojana', name_hi:'उत्तराखंड गौरा देवी कन्या धन योजना', name_ta:'உத்தரகாண்ட் கௌரா தேவி கல்வித் திட்டம்', benefit:'₹50,000 grant for girls from BPL families upon passing 12th class'},
+  {code:'WB', name:'West Bengal Lakshmir Bhandar Scheme', name_hi:'पश्चिम बंगाल लक्ष्मी भंडार योजना', name_ta:'மேற்கு வங்க லட்சுமியின் பண்டார திட்டம்', benefit:'₹1,000-1,200/month basic income support to women of households'},
+  {code:'DL', name:'Delhi Ladli Scheme', name_hi:'दिल्ली लाड़ली योजना', name_ta:'டெல்லி லாட்லி திட்டம்', benefit:'Up to ₹35,000 financial support for education of girls'},
+  {code:'JK', name:'Jammu Kashmir Integrated Social Security', name_hi:'जम्मू कश्मीर एकीकृत सामाजिक सुरक्षा', name_ta:'ஜம்மு காஷ்மீர் சமூக பாதுகாப்புத் திட்டம்', benefit:'₹1,000/month assistance for senior citizens and destitute women'},
+  {code:'LA', name:'Ladakh Old Age Pension Scheme', name_hi:'लद्दाख वृद्धावस्था पेंशन योजना', name_ta:'லடாக் முதியோர் ஓய்வூதியத் திட்டம்', benefit:'₹1,000/month financial aid for elderly citizens'},
+  {code:'AN', name:'Andaman and Nicobar Pension for Widows', name_hi:'अंडमान और निकोबार विधवा पेंशन', name_ta:'அந்தமான் நிக்கோபார் விதவை ஓய்வூதியம்', benefit:'₹2,500/month pension allowance for low income widows'},
+  {code:'CH', name:'Chandigarh Social Security Pension', name_hi:'चंडीगढ़ सामाजिक सुरक्षा पेंशन', name_ta:'சண்டிகர் சமூக பாதுகாப்புத் திட்டம்', benefit:'₹2,000/month pension for elderly and disabled residents'},
+  {code:'DN', name:'Dadra Nagar Haveli Old Age Pension', name_hi:'दादरा नगर हवेली वृद्धावस्था पेंशन', name_ta:'தாத்ரா நகர் ஹவேலி முதியோர் ஓய்வூதியம்', benefit:'₹1,500/month assistance for elderly individuals'},
+  {code:'DD', name:'Daman Diu Pension for Destitute', name_hi:'दमन दीव निराश्रित पेंशन', name_ta:'தாமன் தியூ ஆதரவற்றோர் ஓய்வூதியம்', benefit:'₹2,000/month allowance for disabled and senior citizens'},
+  {code:'LD', name:'Lakshadweep Social Pension Welfare', name_hi:'लक्षद्वीप सामाजिक पेंशन कल्याण', name_ta:'லட்சத்தீவு சமூக ஓய்வூதியத் திட்டம்', benefit:'₹1,500/month welfare pension for low income households'},
+  {code:'PY', name:'Puducherry Old Age Pension Scheme', name_hi:'पुदुचेरी वृद्धावस्था पेंशन योजना', name_ta:'புதுச்சேரி முதியோர் ஓய்வூதியத் திட்டம்', benefit:'₹2,000-3,500/month pension based on age bracket'}
+] AS row
+MATCH (st:State {code: row.code})
+MERGE (s:Scheme {id: 'STATE_SCH_PENSION_' + row.code})
+SET s += {
+  name: row.name,
+  name_hi: row.name_hi,
+  name_ta: row.name_ta,
+  benefit: row.benefit,
+  ministry: 'State Welfare Department',
+  type: 'State Welfare Scheme',
+  url: 'https://india.gov.in',
+  active: true
+}
+MERGE (s)-[:AVAILABLE_IN]->(st)
+WITH s
+MERGE (c:Criteria {id: s.id + '_C1'})
+SET c += {field:'income_max', operator:'<=', value:'300000', label:'Annual family income ≤ ₹3,00,000'}
+MERGE (s)-[:REQUIRES]->(c);
+
 RETURN 'Seed complete ✓' AS status;
