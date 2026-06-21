@@ -10,8 +10,11 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { Audio } from "expo-av";
+import * as FileSystem from "expo-file-system";
 import { useSessionStore } from "@/store/session.store";
 import { ApiService } from "@/services/api.service";
 import { AudioService } from "@/services/audio.service";
@@ -32,6 +35,8 @@ export default function ChatScreen() {
       content:
         language?.code === "hi-IN"
           ? "नमस्ते! मैं ग्रामसेवा एआई सहायक हूँ। आप मुझसे किसी भी सरकारी योजना या पात्रता के बारे में पूछ सकते हैं।"
+          : language?.code === "ta-IN"
+          ? "வணக்கம்! நான் உங்கள் கிராமசேவை எஐ உதவியாளர். அரசு திட்டங்கள், தகுதி அல்லது விண்ணப்ப விவரங்கள் பற்றி என்னிடம் கேளுங்கள்."
           : "Hello! I am your GramSeva AI Assistant. Feel free to ask me anything about government schemes, eligibility, or application details.",
     },
   ]);
@@ -39,6 +44,56 @@ export default function ChatScreen() {
   const [loading, setLoading] = useState(false);
   const [speakingMsgId, setSpeakingMsgId] = useState<string | null>(null);
   const flatListRef = useRef<FlatList>(null);
+
+  // Voice States
+  const [isRecording, setIsRecording] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const recordingRef = useRef<Audio.Recording | null>(null);
+
+  const startChatRecording = async () => {
+    try {
+      const { status } = await Audio.requestPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert("Permission required", "Please grant microphone access.");
+        return;
+      }
+      await Audio.setAudioModeAsync({ allowsRecordingIOS: true });
+      const { recording: rec } = await Audio.Recording.createAsync(
+        Audio.RecordingOptionsPresets.HIGH_QUALITY
+      );
+      recordingRef.current = rec;
+      setIsRecording(true);
+    } catch (err) {
+      console.warn(err);
+      Alert.alert("Microphone Error", "Could not start recording.");
+    }
+  };
+
+  const stopChatRecording = async () => {
+    if (!recordingRef.current) return;
+    setIsRecording(false);
+    setIsTranscribing(true);
+
+    try {
+      await recordingRef.current.stopAndUnloadAsync();
+      const uri = recordingRef.current.getURI();
+      if (!uri) throw new Error("No audio URI");
+
+      const base64Audio = await FileSystem.readAsStringAsync(uri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+
+      const res = await ApiService.rawTranscribe(base64Audio, language?.code || "en-IN");
+      if (res.transcript) {
+        setInputText(res.transcript);
+      }
+    } catch (err) {
+      Alert.alert("Error", "Could not process voice. Please try again.");
+    } finally {
+      setIsTranscribing(false);
+      recordingRef.current = null;
+    }
+  };
 
   const handleSend = async () => {
     if (!inputText.trim() || loading) return;
@@ -85,7 +140,6 @@ export default function ChatScreen() {
 
   const handleSpeak = async (item: Message) => {
     if (speakingMsgId) {
-      // If already speaking, stop and reset
       setSpeakingMsgId(null);
       return;
     }
@@ -152,6 +206,28 @@ export default function ChatScreen() {
           onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
         />
 
+        {/* Listening / Pulsating Indicator */}
+        {isRecording && (
+          <View style={styles.recordingIndicator}>
+            <View style={styles.pulsingDot} />
+            <Text style={styles.recordingText}>
+              {language?.code === "hi-IN"
+                ? "सुन रहा हूँ... रोकने के लिए टैप करें"
+                : language?.code === "ta-IN"
+                ? "கேட்கிறது... நிறுத்த தட்டவும்"
+                : "Listening... Tap to stop"}
+            </Text>
+          </View>
+        )}
+
+        {/* Transcribing Indicator */}
+        {isTranscribing && (
+          <View style={styles.typingIndicator}>
+            <ActivityIndicator size="small" color="#F5C518" />
+            <Text style={styles.typingText}>Transcribing your voice...</Text>
+          </View>
+        )}
+
         {loading && (
           <View style={styles.typingIndicator}>
             <ActivityIndicator size="small" color="#F5C518" />
@@ -165,6 +241,8 @@ export default function ChatScreen() {
             placeholder={
               language?.code === "hi-IN"
                 ? "योजनाओं के बारे में कुछ भी पूछें..."
+                : language?.code === "ta-IN"
+                ? "திட்டங்களைப் பற்றி கேளுங்கள்..."
                 : "Ask anything about schemes..."
             }
             placeholderTextColor="#5a8a6a"
@@ -172,9 +250,27 @@ export default function ChatScreen() {
             onChangeText={setInputText}
             multiline
           />
+
+          {/* Mic voice input button */}
+          <TouchableOpacity
+            style={[styles.micBtn, isRecording && styles.micBtnActive]}
+            onPress={isRecording ? stopChatRecording : startChatRecording}
+            disabled={isTranscribing || loading}
+          >
+            {isTranscribing ? (
+              <ActivityIndicator size="small" color="#F5C518" />
+            ) : (
+              <Ionicons
+                name={isRecording ? "mic-off" : "mic"}
+                size={20}
+                color={isRecording ? "#FFFFFF" : "#0A3728"}
+              />
+            )}
+          </TouchableOpacity>
+
           <TouchableOpacity
             style={[styles.sendBtn, !inputText.trim() && styles.sendBtnDisabled]}
-            disabled={!inputText.trim() || loading}
+            disabled={!inputText.trim() || loading || isRecording || isTranscribing}
             onPress={handleSend}
           >
             <Ionicons name="send" size={20} color="#0A3728" />
@@ -227,6 +323,25 @@ const styles = StyleSheet.create({
     backgroundColor: "#0A3728",
   },
   typingText: { color: "#A8D5B5", fontSize: 13, fontStyle: "italic" },
+  recordingIndicator: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    backgroundColor: "#2E1C1C",
+  },
+  recordingText: {
+    color: "#FF8A80",
+    fontSize: 13,
+    fontWeight: "500",
+  },
+  pulsingDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#FF3B30",
+  },
   inputContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -243,6 +358,17 @@ const styles = StyleSheet.create({
     fontSize: 15,
     maxHeight: 100,
     paddingTop: Platform.OS === "ios" ? 8 : 4,
+  },
+  micBtn: {
+    backgroundColor: "#F5C518",
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  micBtnActive: {
+    backgroundColor: "#FF3B30",
   },
   sendBtn: {
     backgroundColor: "#F5C518",

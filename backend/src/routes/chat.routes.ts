@@ -33,6 +33,18 @@ chatRouter.post("/", async (req: Request, res: Response) => {
       `, { userId });
       if (userRes && userRes.length > 0) {
         const u = userRes[0].u.properties;
+
+        // Fetch user's applied schemes
+        const appRes = await runQuery(`
+          MATCH (u:User {id: $userId})-[:APPLIED_FOR]->(a:Application)-[:FOR_SCHEME]->(s:Scheme)
+          RETURN s.name AS schemeName, a.status AS status, a.createdAt AS appliedAt
+        `, { userId });
+
+        let appText = "No schemes applied yet.";
+        if (appRes && appRes.length > 0) {
+          appText = appRes.map((a: any) => `- Scheme Name: ${a.schemeName}\n  Application Status: ${a.status}\n  Applied Date: ${a.appliedAt || "Not specified"}`).join("\n");
+        }
+
         userContext = `\nThe current user interacting with you is:
 - Name: ${u.name}
 - GramSeva ID: ${u.gramsevaId}
@@ -46,7 +58,10 @@ chatRouter.post("/", async (req: Request, res: Response) => {
 - BPL Card Holder: ${u.bpl_card}
 - Caste Category: ${u.caste_category}
 
-Please use this user's profile details to assess if they qualify for the schemes listed below, reference their specific attributes directly to provide clear, customized assistance, and answer in their query's language.`;
+The user's list of applied schemes and application status:
+${appText}
+
+Please use this user's profile details and applied schemes status to assess if they qualify for the schemes listed below, reference their specific attributes directly to provide clear, customized assistance, and answer in their query's language.`;
       }
     }
 
