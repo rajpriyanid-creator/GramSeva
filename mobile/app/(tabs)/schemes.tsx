@@ -71,6 +71,7 @@ export default function SchemesScreen() {
         horizontal
         showsHorizontalScrollIndicator={false}
         keyExtractor={(t) => t}
+        style={styles.filterBar}
         contentContainerStyle={styles.filterRow}
         renderItem={({ item }) => (
           <TouchableOpacity
@@ -122,6 +123,11 @@ export default function SchemesScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#0A3728" },
+  filterBar: {
+    flexGrow: 0,
+    maxHeight: 50,
+    marginBottom: 8,
+  },
   searchBar: {
     flexDirection: "row",
     alignItems: "center",
