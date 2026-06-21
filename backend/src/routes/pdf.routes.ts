@@ -123,11 +123,12 @@ pdfRouter.get(
         .text(`Ministry / Department: ${scheme.ministry || dept.name || "—"}`);
       doc.moveDown(0.3);
       doc.text(`Helpline: ${dept.helpline || "—"}`);
-      doc.text(`Apply Online: ${scheme.url || dept.portal || "—"}`, {
-        link: scheme.url,
-        underline: true,
-        fillColor: "#1565C0",
-      });
+      doc
+        .fillColor("#1565C0")
+        .text(`Apply Online: ${scheme.url || dept.portal || "—"}`, {
+          link: scheme.url,
+          underline: true,
+        });
 
       doc.moveDown(1);
 
