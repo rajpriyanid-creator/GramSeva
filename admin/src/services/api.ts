@@ -1,6 +1,7 @@
 import axios from "axios";
 
-const BASE = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || "";
+const rawBase = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || "";
+const BASE = rawBase.replace(/\/api\/?$/, "");
 const ADMIN_KEY = import.meta.env.VITE_ADMIN_KEY || "";
 
 const http = axios.create({

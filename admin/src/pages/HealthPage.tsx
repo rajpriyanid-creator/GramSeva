@@ -37,7 +37,8 @@ function fmtUptime(s: number): string {
   return `${m}m ${s % 60}s`;
 }
 
-const BASE = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || "";
+const rawBase = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || "";
+const BASE = rawBase.replace(/\/api\/?$/, "");
 
 export default function HealthPage() {
   const [health,    setHealth]   = useState<any>(null);

@@ -48,7 +48,8 @@ const STATUS_COLORS = { pending: "#F5C518", approved: "#4CAF50", rejected: "#F44
 const STATUS_BG = { pending: "#F5C51822", approved: "#4CAF5022", rejected: "#F4433622" };
 
 export default function ApplicationsPage() {
-  const apiUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || "";
+  const rawApiUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || "";
+  const apiUrl = rawApiUrl.replace(/\/api\/?$/, "");
   const [apps, setApps] = useState<Application[]>([]);
   const [summary, setSummary] = useState<Summary>({ total: 0, pending: 0, approved: 0, rejected: 0 });
   const [loading, setLoading] = useState(true);
