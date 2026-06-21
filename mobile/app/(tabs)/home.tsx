@@ -8,17 +8,18 @@ import {
   SafeAreaView,
   ActivityIndicator,
   Alert,
+  RefreshControl,
 } from "react-native";
 import { Audio } from "expo-av";
 import * as FileSystem from "expo-file-system";
 import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
 import { useSessionStore } from "@/store/session.store";
 import { useSchemesStore } from "@/store/schemes.store";
 import { ApiService } from "@/services/api.service";
 import { AudioService } from "@/services/audio.service";
 import { QUESTIONS } from "@/constants/questions";
 import QuestionFlow from "@/components/QuestionFlow";
-import SchemeCard from "@/components/SchemeCard";
 
 type Step = "intro" | "questions" | "processing" | "results";
 
@@ -33,30 +34,38 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(false);
   const recording = useRef<Audio.Recording | null>(null);
 
-  // Eligible schemes states for logged-in user
-  const [eligibleSchemes, setEligibleSchemes] = useState<any[]>([]);
-  const [fetchingEligible, setFetchingEligible] = useState(false);
-  const [levelFilter, setLevelFilter] = useState<"All" | "Central" | "State">("All");
+  // Dashboard Stats
+  const [eligibleCount, setEligibleCount] = useState(0);
+  const [appliedCount, setAppliedCount] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
 
   const questions =
     QUESTIONS[language?.code || "hi-IN"] || QUESTIONS["hi-IN"];
 
+  const loadDashboardData = async () => {
+    if (!user?.id) return;
+    try {
+      const [eligRes, appRes] = await Promise.all([
+        ApiService.getEligibleSchemes(user.id),
+        ApiService.getUserApplications(user.id),
+      ]);
+      setEligibleCount(eligRes?.schemes?.length || 0);
+      setAppliedCount(appRes?.applications?.length || 0);
+    } catch (err) {
+      console.warn("Could not load dashboard details", err);
+    }
+  };
+
   useEffect(() => {
     if (token && user?.id) {
-      loadEligibleSchemes();
+      loadDashboardData();
     }
-  }, [token, user]);
+  }, [token, user?.id]);
 
-  const loadEligibleSchemes = async () => {
-    setFetchingEligible(true);
-    try {
-      const data = await ApiService.getEligibleSchemes(user!.id);
-      setEligibleSchemes(data.schemes || []);
-    } catch (err) {
-      console.warn("Could not load eligible schemes", err);
-    } finally {
-      setFetchingEligible(false);
-    }
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await loadDashboardData();
+    setRefreshing(false);
   };
 
   const startRecording = async () => {
@@ -173,25 +182,48 @@ export default function HomeScreen() {
     setCurrentQuestion(0);
     setAnswers({});
     setSchemes([]);
+    loadDashboardData();
   };
 
-  // Filter schemes for dashboard based on central/state level
-  const filteredEligible = eligibleSchemes.filter((s) => {
-    const isCentral = !s.states || s.states.includes("ALL") || s.states.length === 0;
-    if (levelFilter === "Central") return isCentral;
-    if (levelFilter === "State") return !isCentral;
-    return true;
-  });
+  const activeLang = language?.code || "en-IN";
 
-  if (step === "intro") {
-    // If logged in, show the Dashboard!
-    if (token && user) {
-      return (
-        <SafeAreaView style={styles.container}>
+  // Localized Strings
+  const t = {
+    welcome: activeLang === "ta-IN" ? "வரவேற்கிறோம்" : activeLang === "hi-IN" ? "स्वागत है" : "Welcome back",
+    eligibleTitle: activeLang === "ta-IN" ? "தகுதியான திட்டங்கள்" : activeLang === "hi-IN" ? "पात्र योजनाएं" : "Eligible Schemes",
+    appliedTitle: activeLang === "ta-IN" ? "விண்ணப்பித்தவை" : activeLang === "hi-IN" ? "आवेदन इतिहास" : "Applied Schemes",
+    viewAll: activeLang === "ta-IN" ? "அனைத்தையும் பார்" : activeLang === "hi-IN" ? "सभी देखें" : "View Details",
+    servicesHeader: activeLang === "ta-IN" ? "விரைவு சேவைகள்" : activeLang === "hi-IN" ? "त्वरित सेवाएं" : "Quick Services",
+    
+    // Services
+    voiceTitle: activeLang === "ta-IN" ? "வாய்ஸ் தகுதி சரிபார்ப்பு" : activeLang === "hi-IN" ? "वॉइस पात्रता जाँच" : "Voice Questionnaire",
+    voiceSub: activeLang === "ta-IN" ? "பேசி தகுதியை கண்டறியவும்" : activeLang === "hi-IN" ? "बोलकर अपनी पात्रता जांचें" : "Answer questions by speaking",
+    
+    chatTitle: activeLang === "ta-IN" ? "எஐ உரையாடல்" : activeLang === "hi-IN" ? "एआई चैट सहायक" : "AI Assistant Chat",
+    chatSub: activeLang === "ta-IN" ? "திட்டங்கள் பற்றி கேளுங்கள்" : activeLang === "hi-IN" ? "योजनाओं के बारे में पूछें" : "Ask doubts via voice/text",
+    
+    cscTitle: activeLang === "ta-IN" ? "அருகிலுள்ள இ-சேவை மையம்" : activeLang === "hi-IN" ? "नजदीकी सीएससी सेंटर" : "Locate CSC Centers",
+    cscSub: activeLang === "ta-IN" ? "இருப்பிடத்தை கண்டறியவும்" : activeLang === "hi-IN" ? "अपने पास का सीएससी खोजें" : "Find nearby Common Service Centers",
+    
+    tipsTitle: activeLang === "ta-IN" ? "உங்களுக்கு தெரியுமா?" : activeLang === "hi-IN" ? "क्या आप जानते हैं?" : "Did you know?",
+    tipsSub: activeLang === "ta-IN" 
+      ? "உங்கள் ஆதார் மற்றும் வங்கி கணக்கு புத்தகம் எப்போதும் கைவசம் வைத்திருக்கவும்." 
+      : activeLang === "hi-IN" 
+      ? "योजनाओं में तेजी से आवेदन के लिए आधार और बैंक पासबुक तैयार रखें।" 
+      : "Keep your Aadhaar Card and Bank Passbook ready for faster scheme processing.",
+  };
+
+  if (step === "intro" && token && user) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <ScrollView
+          contentContainerStyle={styles.dashboardContainer}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#F5C518" />}
+        >
           {/* Dashboard Header */}
           <View style={styles.dashboardHeader}>
             <View>
-              <Text style={styles.welcomeText}>Welcome,</Text>
+              <Text style={styles.welcomeText}>{t.welcome},</Text>
               <Text style={styles.userName}>{user.name}</Text>
               <Text style={styles.userId}>ID: {user.gramsevaId}</Text>
             </View>
@@ -201,55 +233,83 @@ export default function HomeScreen() {
             </View>
           </View>
 
-          {/* Level Filter Chips */}
-          <View style={styles.levelFilterRow}>
-            {(["All", "Central", "State"] as const).map((lvl) => (
-              <TouchableOpacity
-                key={lvl}
-                style={[
-                  styles.levelChip,
-                  levelFilter === lvl && styles.levelChipActive,
-                ]}
-                onPress={() => setLevelFilter(lvl)}
-              >
-                <Text
-                  style={[
-                    styles.levelChipText,
-                    levelFilter === lvl && styles.levelChipTextActive,
-                  ]}
-                >
-                  {lvl === "All" ? "All Eligible" : lvl === "Central" ? "Central Govt" : "State Govt"}
-                </Text>
-              </TouchableOpacity>
-            ))}
+          {/* Quick Stats Grid */}
+          <View style={styles.statsRow}>
+            <TouchableOpacity style={styles.statCard} onPress={() => router.push("/(tabs)/results")}>
+              <View style={[styles.statIconBox, { backgroundColor: "#F5C51822" }]}>
+                <Ionicons name="checkmark-circle" size={24} color="#F5C518" />
+              </View>
+              <Text style={styles.statNumber}>{eligibleCount}</Text>
+              <Text style={styles.statLabel}>{t.eligibleTitle}</Text>
+              <Text style={styles.statAction}>{t.viewAll} →</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.statCard} onPress={() => router.push("/(tabs)/results")}>
+              <View style={[styles.statIconBox, { backgroundColor: "#81C78422" }]}>
+                <Ionicons name="document-text" size={24} color="#81C784" />
+              </View>
+              <Text style={styles.statNumber}>{appliedCount}</Text>
+              <Text style={styles.statLabel}>{t.appliedTitle}</Text>
+              <Text style={styles.statAction}>{t.viewAll} →</Text>
+            </TouchableOpacity>
           </View>
 
-          {/* List of Eligible Schemes */}
-          {fetchingEligible ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#F5C518" />
-              <Text style={styles.loadingText}>Matching eligible schemes...</Text>
-            </View>
-          ) : filteredEligible.length === 0 ? (
-            <View style={styles.noResultsContainer}>
-              <Ionicons name="gift-outline" size={48} color="#A8D5B5" />
-              <Text style={styles.noResultsText}>No eligible schemes found.</Text>
-              <Text style={styles.noResultsSubtext}>
-                We couldn't match any schemes based on your profile. You can browse all schemes in the Schemes tab.
-              </Text>
-            </View>
-          ) : (
-            <ScrollView contentContainerStyle={styles.scrollContent}>
-              <Text style={styles.sectionHeader}>Matches based on your profile ({filteredEligible.length})</Text>
-              {filteredEligible.map((scheme) => (
-                <SchemeCard key={scheme.id} scheme={scheme} language={language} />
-              ))}
-            </ScrollView>
-          )}
-        </SafeAreaView>
-      );
-    }
+          {/* Services Section */}
+          <Text style={styles.sectionHeader}>{t.servicesHeader}</Text>
 
+          <View style={styles.servicesList}>
+            {/* Service 1: Voice questionnaire */}
+            <TouchableOpacity style={styles.serviceItem} onPress={() => setStep("questions")}>
+              <View style={[styles.serviceIconBox, { backgroundColor: "#FF8A80" }]}>
+                <Ionicons name="mic" size={24} color="#FFFFFF" />
+              </View>
+              <View style={styles.serviceMeta}>
+                <Text style={styles.serviceTitle}>{t.voiceTitle}</Text>
+                <Text style={styles.serviceSub}>{t.voiceSub}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color="#A8D5B5" />
+            </TouchableOpacity>
+
+            {/* Service 2: AI Chat */}
+            <TouchableOpacity style={styles.serviceItem} onPress={() => router.push("/(tabs)/chat")}>
+              <View style={[styles.serviceIconBox, { backgroundColor: "#4FC3F7" }]}>
+                <Ionicons name="chatbubbles" size={24} color="#FFFFFF" />
+              </View>
+              <View style={styles.serviceMeta}>
+                <Text style={styles.serviceTitle}>{t.chatTitle}</Text>
+                <Text style={styles.serviceSub}>{t.chatSub}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color="#A8D5B5" />
+            </TouchableOpacity>
+
+            {/* Service 3: CSC locator */}
+            <TouchableOpacity style={styles.serviceItem} onPress={() => router.push("/(tabs)/csc")}>
+              <View style={[styles.serviceIconBox, { backgroundColor: "#81C784" }]}>
+                <Ionicons name="location" size={24} color="#FFFFFF" />
+              </View>
+              <View style={styles.serviceMeta}>
+                <Text style={styles.serviceTitle}>{t.cscTitle}</Text>
+                <Text style={styles.serviceSub}>{t.cscSub}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color="#A8D5B5" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Informational Banner */}
+          <View style={styles.infoBanner}>
+            <View style={styles.infoBannerHeader}>
+              <Ionicons name="bulb-outline" size={20} color="#F5C518" />
+              <Text style={styles.infoBannerTitle}>{t.tipsTitle}</Text>
+            </View>
+            <Text style={styles.infoBannerText}>{t.tipsSub}</Text>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  // Non-logged-in intro screen
+  if (step === "intro") {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.introContainer}>
@@ -318,7 +378,9 @@ export default function HomeScreen() {
         ) : (
           <ScrollView contentContainerStyle={styles.scrollContent}>
             {schemes.map((scheme) => (
-              <SchemeCard key={scheme.id} scheme={scheme} language={language} />
+              <View key={scheme.id} style={{ marginBottom: 12 }}>
+                <Text style={{ color: "#FFF" }}>{scheme.name}</Text>
+              </View>
             ))}
           </ScrollView>
         )}
@@ -344,54 +406,98 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#0A3728" },
+  dashboardContainer: { paddingBottom: 40 },
   dashboardHeader: {
     padding: 20,
     backgroundColor: "#1A5C42",
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     elevation: 3,
   },
-  welcomeText: { color: "#A8D5B5", fontSize: 13 },
-  userName: { color: "#FFFFFF", fontSize: 20, fontWeight: "700", marginVertical: 2 },
-  userId: { color: "#F5C518", fontSize: 12, fontWeight: "600" },
+  welcomeText: { color: "#A8D5B5", fontSize: 13, fontWeight: "500" },
+  userName: { color: "#FFFFFF", fontSize: 22, fontWeight: "800", marginVertical: 2 },
+  userId: { color: "#F5C518", fontSize: 12, fontWeight: "600", fontFamily: "monospace" },
   stateBadge: {
     backgroundColor: "#F5C518",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
   },
-  stateBadgeText: { color: "#0A3728", fontWeight: "700", fontSize: 12 },
-  levelFilterRow: {
+  stateBadgeText: { color: "#0A3728", fontWeight: "800", fontSize: 12 },
+  statsRow: {
     flexDirection: "row",
     paddingHorizontal: 16,
-    gap: 8,
-    marginVertical: 14,
+    gap: 12,
+    marginVertical: 20,
   },
-  levelChip: {
+  statCard: {
     flex: 1,
     backgroundColor: "#1A5C42",
     borderRadius: 20,
-    paddingVertical: 8,
-    alignItems: "center",
+    padding: 16,
     borderWidth: 1,
-    borderColor: "transparent",
+    borderColor: "#2E7D5A",
   },
-  levelChipActive: { borderColor: "#F5C518", backgroundColor: "#235D40" },
-  levelChipText: { color: "#A8D5B5", fontSize: 12, fontWeight: "600" },
-  levelChipTextActive: { color: "#F5C518" },
+  statIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  statNumber: { fontSize: 28, fontWeight: "800", color: "#FFFFFF" },
+  statLabel: { fontSize: 13, color: "#A8D5B5", marginTop: 4, fontWeight: "500" },
+  statAction: { fontSize: 12, color: "#F5C518", marginTop: 10, fontWeight: "700" },
   sectionHeader: {
-    color: "#A8D5B5",
-    fontSize: 13,
+    color: "#F5C518",
+    fontSize: 16,
     fontWeight: "700",
     paddingHorizontal: 16,
-    marginBottom: 8,
+    marginBottom: 12,
   },
+  servicesList: {
+    paddingHorizontal: 16,
+    gap: 12,
+    marginBottom: 20,
+  },
+  serviceItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#1A5C42",
+    padding: 16,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#2E7D5A",
+    gap: 14,
+  },
+  serviceIconBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  serviceMeta: { flex: 1 },
+  serviceTitle: { fontSize: 15, fontWeight: "700", color: "#FFFFFF" },
+  serviceSub: { fontSize: 12, color: "#A8D5B5", marginTop: 2 },
+  infoBanner: {
+    marginHorizontal: 16,
+    backgroundColor: "#0F4C35",
+    padding: 16,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#2E7D5A",
+  },
+  infoBannerHeader: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 6 },
+  infoBannerTitle: { color: "#F5C518", fontWeight: "700", fontSize: 14 },
+  infoBannerText: { color: "#A8D5B5", fontSize: 13, lineHeight: 18 },
   introContainer: {
     flex: 1,
     justifyContent: "center",

@@ -48,17 +48,17 @@ schemesRouter.get("/:id", async (req: Request, res: Response) => {
     const { id } = req.params;
 
     const results = await runQuery(
-      `
-      MATCH (s:Scheme {id: $id})
+      `MATCH (s:Scheme {id: $id})
       OPTIONAL MATCH (s)-[:OFFERED_BY]->(d:Department)
       OPTIONAL MATCH (s)-[:REQUIRES]->(c:Criteria)
       OPTIONAL MATCH (s)-[:AVAILABLE_IN]->(st:State)
+      WITH s, d, collect(DISTINCT c { .id, .field, .operator, .value, .label }) AS criteriaList, collect(DISTINCT st.code) AS stateCodes
       RETURN s {
         .id, .name, .name_hi, .name_ta, .name_te, .name_kn,
         .name_mr, .name_bn, .benefit, .ministry, .type, .url,
         department: CASE WHEN d IS NOT NULL THEN d { .name, .helpline, .portal } ELSE null END,
-        criteria: collect(DISTINCT c { .id, .field, .operator, .value, .label }),
-        states:   collect(DISTINCT st.code)
+        criteria: criteriaList,
+        states:   stateCodes
       } AS scheme
       `,
       { id }
