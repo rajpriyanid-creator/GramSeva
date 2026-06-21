@@ -41,6 +41,11 @@ export const ApiService = {
     return res.data;
   },
 
+  async rawTranscribe(audio: string, language_code: string) {
+    const res = await api.post("/api/eligibility/raw-transcribe", { audio, language_code });
+    return res.data;
+  },
+
   async findSchemes(payload: {
     answers: Record<string, string>;
     language_code: string;

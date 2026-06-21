@@ -67,6 +67,23 @@ eligibilityRouter.post(
   }
 );
 
+eligibilityRouter.post(
+  "/raw-transcribe",
+  async (req: Request, res: Response) => {
+    try {
+      const { audio, language_code } = req.body;
+      if (!audio || !language_code) {
+        return res.status(400).json({ error: "audio and language_code are required" });
+      }
+      const transcript = await transcribeAudio(audio, language_code);
+      res.json({ transcript });
+    } catch (err: any) {
+      console.error("[/raw-transcribe]", err.message);
+      res.status(500).json({ error: err.message });
+    }
+  }
+);
+
 // ─── POST /api/eligibility/find-schemes ───────────────────────────────────
 // Receives all 8 answers (raw text), runs entity extraction + Neo4j
 // Returns: matched schemes + user profile + TTS summary audio

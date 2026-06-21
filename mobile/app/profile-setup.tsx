@@ -1,12 +1,15 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView,
   ScrollView, ActivityIndicator, Alert, KeyboardAvoidingView, Platform
 } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { Audio } from "expo-av";
+import * as FileSystem from "expo-file-system";
 import { useSessionStore } from "@/store/session.store";
 import { ApiService } from "@/services/api.service";
+import { AudioService } from "@/services/audio.service";
 
 const STATES = ["AP","AR","AS","BR","CG","GA","GJ","HR","HP","JH","KA","KL","MP","MH","MN","ML","MZ","NL","OD","PB","RJ","SK","TN","TS","TR","UP","UK","WB","DL","JK","LA","AN","CH","DN","DD","LD","PY"];
 const STATES_FULL: Record<string, string> = {
@@ -51,7 +54,7 @@ const initial: ProfileData = {
 };
 
 export default function ProfileSetupScreen() {
-  const { user, setAuth, token } = useSessionStore();
+  const { user, setAuth, token, language } = useSessionStore();
   const [data, setData] = useState<ProfileData>(() => {
     if (!user) return initial;
     return {
@@ -85,6 +88,12 @@ export default function ProfileSetupScreen() {
   const [section, setSection] = useState<Section>("personal");
   const [loading, setLoading] = useState(false);
 
+  // STT / TTS states
+  const [recordingField, setRecordingField] = useState<string | null>(null);
+  const [speakingField, setSpeakingField] = useState<string | null>(null);
+  const [fieldLoading, setFieldLoading] = useState<string | null>(null);
+  const recordingRef = useRef<Audio.Recording | null>(null);
+
   const set = (key: keyof ProfileData, val: any) => setData(prev => ({ ...prev, [key]: val }));
 
   const sections: { key: Section; label: string; icon: string }[] = [
@@ -94,6 +103,73 @@ export default function ProfileSetupScreen() {
     { key: "documents", label: "Documents", icon: "document-text" },
     { key: "bank",      label: "Bank",      icon: "card" },
   ];
+
+  const handleSpeakLabel = async (key: string, labelText: string) => {
+    if (speakingField === key) {
+      setSpeakingField(null);
+      return;
+    }
+    setSpeakingField(key);
+    try {
+      const data = await ApiService.getChatTTS(labelText, language?.code || "en-IN");
+      if (data.audio) {
+        await AudioService.playBase64Audio(data.audio);
+      }
+    } catch (err) {
+      console.warn("TTS failed for label:", labelText, err);
+    } finally {
+      setSpeakingField(null);
+    }
+  };
+
+  const handleStartRecording = async (key: keyof ProfileData) => {
+    try {
+      const { status } = await Audio.requestPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert("Permission required", "Please grant microphone access.");
+        return;
+      }
+      await Audio.setAudioModeAsync({ allowsRecordingIOS: true });
+      const { recording: rec } = await Audio.Recording.createAsync(
+        Audio.RecordingOptionsPresets.HIGH_QUALITY
+      );
+      recordingRef.current = rec;
+      setRecordingField(key);
+    } catch (err) {
+      Alert.alert("Microphone Error", "Could not start recording.");
+    }
+  };
+
+  const handleStopRecording = async (key: keyof ProfileData) => {
+    if (!recordingRef.current) return;
+    setRecordingField(null);
+    setFieldLoading(key);
+
+    try {
+      await recordingRef.current.stopAndUnloadAsync();
+      const uri = recordingRef.current.getURI();
+      if (!uri) throw new Error("No audio URI");
+
+      const base64Audio = await FileSystem.readAsStringAsync(uri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+
+      const res = await ApiService.rawTranscribe(base64Audio, language?.code || "en-IN");
+      if (res.transcript) {
+        let val = res.transcript.trim();
+        // Clean up numeric inputs
+        if (["age", "familySize", "annual_income", "land_acres", "disabilityPercentage", "aadhaarNo", "rationCardNo", "bankAccountNo"].includes(key)) {
+          val = val.replace(/\D/g, "");
+        }
+        set(key, val);
+      }
+    } catch (err) {
+      Alert.alert("Error", "Could not transcribe audio. Please try typing.");
+    } finally {
+      setFieldLoading(null);
+      recordingRef.current = null;
+    }
+  };
 
   const handleSave = async () => {
     if (!user?.id) return;
@@ -113,12 +189,67 @@ export default function ProfileSetupScreen() {
     }
   };
 
-  const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
-    <View style={s.field}>
-      <Text style={s.fieldLabel}>{label}</Text>
-      {children}
-    </View>
-  );
+  const Field = ({
+    label,
+    fieldKey,
+    children,
+    hideMic = false,
+  }: {
+    label: string;
+    fieldKey: keyof ProfileData;
+    children: React.ReactNode;
+    hideMic?: boolean;
+  }) => {
+    const isSpeaking = speakingField === fieldKey;
+    const isRecording = recordingField === fieldKey;
+    const isLoading = fieldLoading === fieldKey;
+
+    return (
+      <View style={s.field}>
+        <View style={s.fieldHeaderRow}>
+          <Text style={s.fieldLabel}>{label}</Text>
+          <View style={s.actionsRow}>
+            {/* Speaker Icon */}
+            <TouchableOpacity
+              onPress={() => handleSpeakLabel(fieldKey, label)}
+              style={s.iconBtn}
+            >
+              <Ionicons
+                name={isSpeaking ? "volume-mute" : "volume-high"}
+                size={14}
+                color={isSpeaking ? "#F5C518" : "#A8D5B5"}
+              />
+            </TouchableOpacity>
+
+            {/* Mic Icon */}
+            {!hideMic && (
+              <TouchableOpacity
+                onPress={() => {
+                  if (isRecording) {
+                    handleStopRecording(fieldKey);
+                  } else {
+                    handleStartRecording(fieldKey);
+                  }
+                }}
+                style={[s.iconBtn, isRecording && s.iconBtnActive]}
+              >
+                {isLoading ? (
+                  <ActivityIndicator size="small" color="#F5C518" />
+                ) : (
+                  <Ionicons
+                    name={isRecording ? "mic-off" : "mic"}
+                    size={14}
+                    color={isRecording ? "#FF3B30" : "#A8D5B5"}
+                  />
+                )}
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+        {children}
+      </View>
+    );
+  };
 
   const Input = ({ value, onChange, placeholder, keyboard = "default", max }: any) => (
     <TextInput
@@ -181,25 +312,25 @@ export default function ProfileSetupScreen() {
 
           {section === "personal" && (
             <>
-              <Field label="Age *">
+              <Field label="Age *" fieldKey="age">
                 <Input value={data.age} onChange={(v: string) => set("age", v)} placeholder="e.g. 35" keyboard="numeric" max={3} />
               </Field>
-              <Field label="Gender *">
+              <Field label="Gender *" fieldKey="gender" hideMic>
                 <Picker options={["M", "F", "OTHER"]} value={data.gender} onChange={(v) => set("gender", v)} />
               </Field>
-              <Field label="Marital Status">
+              <Field label="Marital Status" fieldKey="maritalStatus" hideMic>
                 <Picker options={["Unmarried", "Married", "Widowed", "Divorced"]} value={data.maritalStatus} onChange={(v) => set("maritalStatus", v)} />
               </Field>
-              <Field label="Family Size (members)">
+              <Field label="Family Size (members)" fieldKey="familySize">
                 <Input value={data.familySize} onChange={(v: string) => set("familySize", v)} placeholder="e.g. 4" keyboard="numeric" max={2} />
               </Field>
-              <Field label="Education Level">
+              <Field label="Education Level" fieldKey="educationLevel" hideMic>
                 <Picker options={["No Formal", "5th Pass", "8th Pass", "10th Pass", "12th Pass", "Graduate", "Post Graduate"]}
                   value={data.educationLevel} onChange={(v) => set("educationLevel", v)} />
               </Field>
               <Toggle value={data.disabilityStatus} onChange={(v) => set("disabilityStatus", v)} label="Person with Disability (PwD)" />
               {data.disabilityStatus && (
-                <Field label="Disability Percentage (%)">
+                <Field label="Disability Percentage (%)" fieldKey="disabilityPercentage">
                   <Input value={data.disabilityPercentage} onChange={(v: string) => set("disabilityPercentage", v)} placeholder="e.g. 40" keyboard="numeric" max={3} />
                 </Field>
               )}
@@ -208,7 +339,7 @@ export default function ProfileSetupScreen() {
 
           {section === "location" && (
             <>
-              <Field label="State *">
+              <Field label="State *" fieldKey="state" hideMic>
                 <ScrollView style={{ maxHeight: 200 }}>
                   {STATES.map(code => (
                     <TouchableOpacity
@@ -223,10 +354,10 @@ export default function ProfileSetupScreen() {
                   ))}
                 </ScrollView>
               </Field>
-              <Field label="District">
+              <Field label="District" fieldKey="district">
                 <Input value={data.district} onChange={(v: string) => set("district", v)} placeholder="e.g. Lucknow" />
               </Field>
-              <Field label="House Type">
+              <Field label="House Type" fieldKey="houseType" hideMic>
                 <Picker options={["Pucca", "Semi-Pucca", "Kachha"]} value={data.houseType} onChange={(v) => set("houseType", v)} />
               </Field>
             </>
@@ -234,24 +365,24 @@ export default function ProfileSetupScreen() {
 
           {section === "economic" && (
             <>
-              <Field label="Category (Caste)">
+              <Field label="Category (Caste)" fieldKey="caste_category" hideMic>
                 <Picker options={["SC", "ST", "OBC", "GEN", "EWS"]} value={data.caste_category} onChange={(v) => set("caste_category", v)} />
               </Field>
-              <Field label="Community / Sub-caste">
+              <Field label="Community / Sub-caste" fieldKey="community">
                 <Input value={data.community} onChange={(v: string) => set("community", v)} placeholder="e.g. Kurmi, Yadav, Paraiyar..." />
               </Field>
-              <Field label="Annual Family Income (₹)">
+              <Field label="Annual Family Income (₹)" fieldKey="annual_income">
                 <Input value={data.annual_income} onChange={(v: string) => set("annual_income", v)} placeholder="e.g. 120000" keyboard="numeric" />
               </Field>
               <Toggle value={data.bpl_card} onChange={(v) => set("bpl_card", v)} label="I have a BPL / Ration Card" />
-              <Field label="Occupation">
+              <Field label="Occupation" fieldKey="occupation" hideMic>
                 <Picker options={["farmer", "labourer", "business", "student", "govt_employee", "private_employee", "other"]}
                   value={data.occupation} onChange={(v) => set("occupation", v)} />
               </Field>
-              <Field label="Agricultural Land (Acres)">
+              <Field label="Agricultural Land (Acres)" fieldKey="land_acres">
                 <Input value={data.land_acres} onChange={(v: string) => set("land_acres", v)} placeholder="e.g. 3.5 (enter 0 if none)" keyboard="decimal-pad" />
               </Field>
-              <Field label="Land Type">
+              <Field label="Land Type" fieldKey="landType" hideMic>
                 <Picker options={["Agricultural", "Residential", "Mixed", "None"]} value={data.landType} onChange={(v) => set("landType", v)} />
               </Field>
             </>
@@ -263,19 +394,19 @@ export default function ProfileSetupScreen() {
                 <Ionicons name="information-circle" size={16} color="#F5C518" />
                 <Text style={s.docNoteText}>Enter document numbers exactly as printed. These are used to verify eligibility for schemes.</Text>
               </View>
-              <Field label="Aadhaar Number">
+              <Field label="Aadhaar Number" fieldKey="aadhaarNo">
                 <Input value={data.aadhaarNo} onChange={(v: string) => set("aadhaarNo", v)} placeholder="XXXX XXXX XXXX" keyboard="numeric" max={14} />
               </Field>
-              <Field label="Ration Card Number">
+              <Field label="Ration Card Number" fieldKey="rationCardNo">
                 <Input value={data.rationCardNo} onChange={(v: string) => set("rationCardNo", v)} placeholder="e.g. RC-TN-2022-0123456" />
               </Field>
-              <Field label="Income Certificate Number">
+              <Field label="Income Certificate Number" fieldKey="incomeCertNo">
                 <Input value={data.incomeCertNo} onChange={(v: string) => set("incomeCertNo", v)} placeholder="e.g. INC-TN-CHN-2022-001" />
               </Field>
-              <Field label="Community / Caste Certificate Number">
+              <Field label="Community / Caste Certificate Number" fieldKey="communityCertNo">
                 <Input value={data.communityCertNo} onChange={(v: string) => set("communityCertNo", v)} placeholder="e.g. CC-SC-TN-2020-047" />
               </Field>
-              <Field label="Voter ID Number">
+              <Field label="Voter ID Number" fieldKey="voterId">
                 <Input value={data.voterId} onChange={(v: string) => set("voterId", v)} placeholder="e.g. TML9876543" />
               </Field>
             </>
@@ -287,13 +418,13 @@ export default function ProfileSetupScreen() {
                 <Ionicons name="shield-checkmark" size={16} color="#4CAF50" />
                 <Text style={s.docNoteText}>Bank details are required for Direct Benefit Transfer (DBT) schemes.</Text>
               </View>
-              <Field label="Bank Account Number">
+              <Field label="Bank Account Number" fieldKey="bankAccountNo">
                 <Input value={data.bankAccountNo} onChange={(v: string) => set("bankAccountNo", v)} placeholder="Account number" keyboard="numeric" max={18} />
               </Field>
-              <Field label="IFSC Code">
+              <Field label="IFSC Code" fieldKey="ifscCode">
                 <Input value={data.ifscCode} onChange={(v: string) => set("ifscCode", v.toUpperCase())} placeholder="e.g. SBIN0001234" max={11} />
               </Field>
-              <Field label="Bank Name">
+              <Field label="Bank Name" fieldKey="bankName">
                 <Input value={data.bankName} onChange={(v: string) => set("bankName", v)} placeholder="e.g. State Bank of India" />
               </Field>
             </>
@@ -340,7 +471,32 @@ const s = StyleSheet.create({
   secTabTextActive: { color: "#0A3728" },
   form: { flex: 1 },
   field: { marginBottom: 18 },
-  fieldLabel: { fontSize: 11, color: "#A8D5B5", fontWeight: "700", marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 },
+  fieldHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  fieldLabel: { fontSize: 11, color: "#A8D5B5", fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5 },
+  actionsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  iconBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#112e20",
+    borderWidth: 1,
+    borderColor: "#1e4d35",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  iconBtnActive: {
+    backgroundColor: "#3A1E1E",
+    borderColor: "#FF3B30",
+  },
   textInput: {
     backgroundColor: "#112e20", borderRadius: 12, borderWidth: 1,
     borderColor: "#1e4d35", paddingHorizontal: 14, paddingVertical: 12,
