@@ -1,11 +1,14 @@
 services:
+  # 1. Backend Express API
   - type: web
     name: gramseva-api
     runtime: node
     rootDir: backend
-    buildCommand: npm ci && npm run build
+    buildCommand: npm install && npm run build
     startCommand: npm start
-    plan: starter
+    plan: free
+    healthCheckPath: /health
+    autoDeploy: true
     envVars:
       - key: NODE_ENV
         value: production
@@ -17,24 +20,41 @@ services:
         sync: false
       - key: SARVAM_API_KEY
         sync: false
-    healthCheckPath: /health
-    autoDeploy: true
 
-crons:
-  - name: scheme-sync
-    runtime: node
-    rootDir: .
-    schedule: "0 19 * * *"
-    buildCommand: npm ci --prefix backend
-    command: node render-workflows/scripts/fetch-myscheme.js && node render-workflows/scripts/parse-scheme-pdfs.js && node render-workflows/scripts/update-neo4j.js && node render-workflows/scripts/fetch-csc.js && node render-workflows/scripts/update-csc-neo4j.js && node render-workflows/scripts/validate-graph.js
+  # 2. Admin Panel (Static React site)
+  - type: web
+    name: gramseva-admin
+    runtime: static
+    rootDir: admin
+    buildCommand: npm install && npm run build
+    publishPath: dist
+    plan: free
+    headers:
+      - key: Cache-Control
+        value: "no-cache"
     envVars:
-      - key: NEO4J_URI
-        sync: false
-      - key: NEO4J_USERNAME
-        sync: false
-      - key: NEO4J_PASSWORD
-        sync: false
-      - key: DATA_GOV_API_KEY
-        sync: false
-      - key: SLACK_WEBHOOK
-        sync: false
+      - key: VITE_API_BASE_URL
+        sync: false # Connect this to the deployed gramseva-api URL
+
+# Note: Cron jobs are a paid feature on Render ($1+/month).
+# If you want to use the free tier, you can run these scripts using
+# free Github Actions, or trigger them via external cron triggers (like cron-job.org).
+#
+# crons:
+#   - name: scheme-sync
+#     runtime: node
+#     rootDir: .
+#     schedule: "0 19 * * *"
+#     buildCommand: npm ci --prefix backend
+#     command: node render-workflows/scripts/fetch-myscheme.js && node render-workflows/scripts/parse-scheme-pdfs.js && node render-workflows/scripts/update-neo4j.js && node render-workflows/scripts/fetch-csc.js && node render-workflows/scripts/update-csc-neo4j.js && node render-workflows/scripts/validate-graph.js
+#     envVars:
+#       - key: NEO4J_URI
+#         sync: false
+#       - key: NEO4J_USERNAME
+#         sync: false
+#       - key: NEO4J_PASSWORD
+#         sync: false
+#       - key: DATA_GOV_API_KEY
+#         sync: false
+#       - key: SLACK_WEBHOOK
+#         sync: false
