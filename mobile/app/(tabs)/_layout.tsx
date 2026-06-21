@@ -15,11 +15,14 @@ export default function TabsLayout() {
     // If the user has logged in but their profile is not complete,
     // force them to complete their details first.
     if (token && user && user.profileComplete === false) {
-      Alert.alert(
-        "Complete Your Profile",
-        "Please complete your profile details first to browse and apply for schemes."
-      );
-      router.replace("/profile-setup");
+      const timer = setTimeout(() => {
+        Alert.alert(
+          "Complete Your Profile",
+          "Please complete your profile details first to browse and apply for schemes."
+        );
+        router.replace("/profile-setup");
+      }, 100);
+      return () => clearTimeout(timer);
     }
   }, [user, token, rootNavigationState?.key]);
 

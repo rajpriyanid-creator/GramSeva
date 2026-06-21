@@ -21,7 +21,10 @@ export default function LanguageSelector() {
     if (!rootNavigationState?.key) return;
 
     if (isLoggedIn && user && language) {
-      router.replace("/(tabs)/home");
+      const timer = setTimeout(() => {
+        router.replace("/(tabs)/home");
+      }, 100);
+      return () => clearTimeout(timer);
     }
   }, [isLoggedIn, user, language, rootNavigationState?.key]);
 
