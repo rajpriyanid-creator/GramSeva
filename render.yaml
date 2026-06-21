@@ -22,16 +22,15 @@ services:
         sync: false
 
   # 2. Admin Panel (Static React site)
-  - type: web
+  - type: static
     name: gramseva-admin
-    runtime: static
     rootDir: admin
     buildCommand: npm install && npm run build
     publishPath: dist
-    plan: free
     headers:
-      - key: Cache-Control
-        value: "no-cache"
+      - path: /*
+        name: Cache-Control
+        value: no-cache
     envVars:
       - key: VITE_API_BASE_URL
         sync: false # Connect this to the deployed gramseva-api URL
