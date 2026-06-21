@@ -6,6 +6,9 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   TextInput,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Question } from "@/constants/questions";
@@ -20,6 +23,7 @@ interface Props {
   onPressRecord: () => void;
   onSubmitText: (text: string) => void;
   language: any;
+  onCancel?: () => void;
 }
 
 export default function QuestionFlow({
@@ -31,96 +35,147 @@ export default function QuestionFlow({
   onPressRecord,
   onSubmitText,
   language,
+  onCancel,
 }: Props) {
   const [typedText, setTypedText] = useState("");
   const question = questions[currentIndex];
   const progress = (currentIndex / total) * 100;
 
+  const activeLang = language?.code || "en-IN";
+  const cancelText = activeLang === "ta-IN" ? "வெளியேறு" : activeLang === "hi-IN" ? "रद्द करें" : "Cancel";
+
   return (
-    <View style={styles.container}>
-      {/* Progress */}
-      <View style={styles.progressContainer}>
-        <Text style={styles.progressLabel}>
-          Question {currentIndex + 1} of {total}
-        </Text>
-        <View style={styles.progressBar}>
-          <View style={[styles.progressFill, { width: `${progress}%` }]} />
-        </View>
-      </View>
-
-      {/* Question dots */}
-      <View style={styles.dots}>
-        {questions.map((_, i) => (
-          <View
-            key={i}
-            style={[
-              styles.dot,
-              i < currentIndex && styles.dotDone,
-              i === currentIndex && styles.dotActive,
-            ]}
-          />
-        ))}
-      </View>
-
-      {/* Question card */}
-      <View style={styles.questionCard}>
-        <Ionicons name="help-circle" size={28} color="#F5C518" />
-        <Text style={styles.questionText}>{question.text}</Text>
-        <Text style={styles.hintText}>{question.hint}</Text>
-      </View>
-
-      {/* Inputs */}
-      {loading ? (
-        <View style={styles.loadingBox}>
-          <ActivityIndicator size="large" color="#F5C518" />
-          <Text style={styles.loadingText}>Processing...</Text>
-        </View>
-      ) : (
-        <View style={styles.inputsWrapper}>
-          {/* Voice button */}
-          <View style={styles.micContainer}>
-            <VoiceButton isRecording={isRecording} onPress={onPressRecord} />
-            <Text style={styles.micLabel}>
-              {isRecording
-                ? (language?.ui?.stopRecording || "Tap to stop")
-                : (language?.ui?.startRecording || "Tap to speak")}
-            </Text>
-          </View>
-
-          {/* Text Input Option */}
-          <View style={styles.dividerRow}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>OR</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          <View style={styles.typeContainer}>
-            <TextInput
-              style={styles.textInput}
-              placeholder="Type your answer here..."
-              placeholderTextColor="#5a8a6a"
-              value={typedText}
-              onChangeText={setTypedText}
-            />
-            <TouchableOpacity
-              style={[styles.sendBtn, !typedText.trim() && styles.sendBtnDisabled]}
-              disabled={!typedText.trim()}
-              onPress={() => {
-                onSubmitText(typedText);
-                setTypedText("");
-              }}
-            >
-              <Ionicons name="send" size={16} color="#0A3728" />
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={{ flex: 1 }}
+    >
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* Header with back button */}
+        <View style={styles.header}>
+          {onCancel && (
+            <TouchableOpacity style={styles.backBtn} onPress={onCancel}>
+              <Ionicons name="arrow-back" size={20} color="#F5C518" />
+              <Text style={styles.backText}>{cancelText}</Text>
             </TouchableOpacity>
+          )}
+          <Text style={styles.headerTitle}>
+            {activeLang === "ta-IN" ? "தகுதி கண்டறிதல்" : activeLang === "hi-IN" ? "पात्रता विज़ार्ड" : "Eligibility Wizard"}
+          </Text>
+        </View>
+
+        {/* Progress */}
+        <View style={styles.progressContainer}>
+          <Text style={styles.progressLabel}>
+            {activeLang === "ta-IN"
+              ? `கேள்வி ${currentIndex + 1} / ${total}`
+              : activeLang === "hi-IN"
+              ? `प्रश्न ${currentIndex + 1} / ${total}`
+              : `Question ${currentIndex + 1} of ${total}`}
+          </Text>
+          <View style={styles.progressBar}>
+            <View style={[styles.progressFill, { width: `${progress}%` }]} />
           </View>
         </View>
-      )}
-    </View>
+
+        {/* Question dots */}
+        <View style={styles.dots}>
+          {questions.map((_, i) => (
+            <View
+              key={i}
+              style={[
+                styles.dot,
+                i < currentIndex && styles.dotDone,
+                i === currentIndex && styles.dotActive,
+              ]}
+            />
+          ))}
+        </View>
+
+        {/* Question card */}
+        <View style={styles.questionCard}>
+          <Ionicons name="help-circle" size={28} color="#F5C518" />
+          <Text style={styles.questionText}>{question.text}</Text>
+          <Text style={styles.hintText}>{question.hint}</Text>
+        </View>
+
+        {/* Inputs */}
+        {loading ? (
+          <View style={styles.loadingBox}>
+            <ActivityIndicator size="large" color="#F5C518" />
+            <Text style={styles.loadingText}>Processing...</Text>
+          </View>
+        ) : (
+          <View style={styles.inputsWrapper}>
+            {/* Voice button */}
+            <View style={styles.micContainer}>
+              <VoiceButton isRecording={isRecording} onPress={onPressRecord} />
+              <Text style={styles.micLabel}>
+                {isRecording
+                  ? language?.ui?.stopRecording || "Tap to stop"
+                  : language?.ui?.startRecording || "Tap to speak"}
+              </Text>
+            </View>
+
+            {/* Text Input Option */}
+            <View style={styles.dividerRow}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>OR</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            <View style={styles.typeContainer}>
+              <TextInput
+                style={styles.textInput}
+                placeholder={activeLang === "ta-IN" ? "பதிலை இங்கே தட்டச்சு செய்க..." : activeLang === "hi-IN" ? "अपना उत्तर यहाँ टाइप करें..." : "Type your answer here..."}
+                placeholderTextColor="#5a8a6a"
+                value={typedText}
+                onChangeText={setTypedText}
+              />
+              <TouchableOpacity
+                style={[styles.sendBtn, !typedText.trim() && styles.sendBtnDisabled]}
+                disabled={!typedText.trim()}
+                onPress={() => {
+                  onSubmitText(typedText);
+                  setTypedText("");
+                }}
+              >
+                <Ionicons name="send" size={16} color="#0A3728" />
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 24 },
+  scrollContent: { flexGrow: 1, padding: 24, justifyContent: "center" },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 20,
+  },
+  backBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  backText: {
+    color: "#F5C518",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  headerTitle: {
+    color: "#A8D5B5",
+    fontSize: 14,
+    fontWeight: "700",
+    textTransform: "uppercase",
+  },
   progressContainer: { marginBottom: 16 },
   progressLabel: { color: "#A8D5B5", fontSize: 13, marginBottom: 6 },
   progressBar: {

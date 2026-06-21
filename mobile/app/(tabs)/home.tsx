@@ -399,6 +399,7 @@ export default function HomeScreen() {
         onPressRecord={isRecording ? stopRecording : startRecording}
         onSubmitText={handleTextSubmit}
         language={language}
+        onCancel={restart}
       />
     </SafeAreaView>
   );

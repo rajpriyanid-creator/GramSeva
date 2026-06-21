@@ -101,6 +101,16 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="csc"
+        options={{
+          title: "Service Centres",
+          tabBarLabel: "CSC",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="location" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="applications"
         options={{
           href: null,
