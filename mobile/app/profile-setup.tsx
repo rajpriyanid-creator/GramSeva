@@ -290,7 +290,11 @@ export default function ProfileSetupScreen() {
       await ApiService.updateProfile(user.id, data);
       const meRes = await ApiService.getMe(user.id);
       setAuth(meRes.user, token || "");
-      router.replace("/(tabs)/home");
+      if (router.canGoBack()) {
+        router.back();
+      } else {
+        router.replace("/(tabs)/home");
+      }
     } catch (err: any) {
       Alert.alert("Error", err?.response?.data?.error || "Could not save profile");
     } finally {
@@ -460,7 +464,13 @@ export default function ProfileSetupScreen() {
             </>
           )}
         </TouchableOpacity>
-        <TouchableOpacity style={s.skipBtn} onPress={() => router.replace("/(tabs)/home")}>
+        <TouchableOpacity style={s.skipBtn} onPress={() => {
+          if (router.canGoBack()) {
+            router.back();
+          } else {
+            router.replace("/(tabs)/home");
+          }
+        }}>
           <Text style={s.skipText}>{t.skipBtn}</Text>
         </TouchableOpacity>
       </View>
