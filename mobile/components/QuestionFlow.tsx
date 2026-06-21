@@ -48,7 +48,7 @@ export default function QuestionFlow({
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "padding"}
       style={{ flex: 1 }}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 80}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 120 : 100}
     >
       <ScrollView
         contentContainerStyle={styles.scrollContent}
