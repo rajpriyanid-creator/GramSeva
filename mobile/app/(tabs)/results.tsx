@@ -18,28 +18,35 @@ import SchemeCard from "@/components/SchemeCard";
 export default function ResultsScreen() {
   const { language, user } = useSessionStore();
   const { matchedSchemes, setMatchedSchemes } = useSchemesStore();
+  const [applications, setApplications] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchEligibleSchemes = async () => {
+  const fetchData = async () => {
     if (!user?.id) return;
     setLoading(true);
     setError(null);
     try {
-      const data = await ApiService.getEligibleSchemes(user.id);
-      if (data && data.schemes) {
-        setMatchedSchemes(data.schemes);
+      const [eligRes, appRes] = await Promise.all([
+        ApiService.getEligibleSchemes(user.id),
+        ApiService.getUserApplications(user.id),
+      ]);
+      if (eligRes && eligRes.schemes) {
+        setMatchedSchemes(eligRes.schemes);
+      }
+      if (appRes && appRes.applications) {
+        setApplications(appRes.applications);
       }
     } catch (err: any) {
-      console.warn("Failed to fetch eligible schemes:", err);
-      setError("Could not load eligible schemes");
+      console.warn("Failed to fetch data:", err);
+      setError("Could not load schemes and applications");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchEligibleSchemes();
+    fetchData();
   }, [user?.id]);
 
   const activeLang = language?.code || "en-IN";
@@ -55,7 +62,10 @@ export default function ResultsScreen() {
     btnText: activeLang === "ta-IN" ? "வாய்ஸ் தேடலைத் தொடங்கு" : activeLang === "hi-IN" ? "वॉइस खोज शुरू करें" : "Start Voice Query",
     qualifyText: activeLang === "ta-IN" ? "திட்டங்களுக்கு நீங்கள் தகுதியுடையவர்" : activeLang === "hi-IN" ? "योजनाएं जिनके लिए आप पात्र हैं" : "schemes you qualify for",
     loadingText: activeLang === "ta-IN" ? "பொருத்தமான திட்டங்களை தேடுகிறது..." : activeLang === "hi-IN" ? "पात्र योजनाओं की खोज जारी है..." : "Checking eligibility...",
-    refreshText: activeLang === "ta-IN" ? "புதுப்பி" : activeLang === "hi-IN" ? "तरोताजा करें" : "Refresh",
+  };
+
+  const getApplicationForScheme = (schemeId: string) => {
+    return applications.find((app) => app.schemeId === schemeId);
   };
 
   if (loading && matchedSchemes.length === 0) {
@@ -104,7 +114,7 @@ export default function ResultsScreen() {
             <Ionicons name="briefcase" size={14} color="#F5C518" />
             <Text style={styles.profileText}>{user.occupation || "N/A"}</Text>
           </View>
-          <TouchableOpacity onPress={fetchEligibleSchemes} disabled={loading} style={styles.refreshBtn}>
+          <TouchableOpacity onPress={fetchData} disabled={loading} style={styles.refreshBtn}>
             <Ionicons name="refresh" size={16} color="#F5C518" />
           </TouchableOpacity>
         </View>
@@ -129,7 +139,12 @@ export default function ResultsScreen() {
           </View>
         }
         renderItem={({ item }) => (
-          <SchemeCard scheme={item} language={language} />
+          <SchemeCard 
+            scheme={item} 
+            language={language} 
+            application={getApplicationForScheme(item.id)}
+            onApplySuccess={fetchData}
+          />
         )}
       />
     </SafeAreaView>

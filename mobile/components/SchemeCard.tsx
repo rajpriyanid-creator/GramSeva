@@ -17,9 +17,18 @@ interface Props {
     department: { helpline: string; name: string };
   };
   language: { code: string } | null;
+  application?: {
+    id: string;
+    status: "pending" | "approved" | "rejected";
+    submittedAt: string;
+    remarks?: string;
+  };
+  onApplySuccess?: () => void;
 }
 
-export default function SchemeCard({ scheme, language }: Props) {
+const STATUS_ICON = { pending: "time", approved: "checkmark-circle", rejected: "close-circle" };
+
+export default function SchemeCard({ scheme, language, application, onApplySuccess }: Props) {
   const { user, isLoggedIn } = useSessionStore();
   const [applying, setApplying] = useState(false);
   const [applied, setApplied] = useState(false);
@@ -59,7 +68,7 @@ export default function SchemeCard({ scheme, language }: Props) {
 
     Alert.alert(
       "Apply for Scheme",
-      `Apply for "${scheme.name}"?\n\nYour registered profile details will be submitted. You can track the status in My Applications tab.`,
+      `Apply for "${localName || scheme.name}"?\n\nYour registered profile details will be submitted. You can track the status directly on this card.`,
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -69,7 +78,8 @@ export default function SchemeCard({ scheme, language }: Props) {
             try {
               await ApiService.applyForScheme(user.id, scheme.id);
               setApplied(true);
-              Alert.alert("✅ Applied!", `Your application for "${scheme.name}" has been submitted. Track it in My Applications tab.`);
+              Alert.alert("✅ Applied!", `Your application for "${localName || scheme.name}" has been submitted.`);
+              if (onApplySuccess) onApplySuccess();
             } catch (err: any) {
               const msg = err?.response?.data?.error || "Could not submit application";
               if (msg.includes("Already applied")) {
@@ -87,6 +97,19 @@ export default function SchemeCard({ scheme, language }: Props) {
     );
   };
 
+  const getStatusColor = () => {
+    if (application) {
+      if (application.status === "approved") return "#4CAF50";
+      if (application.status === "rejected") return "#F44336";
+      return "#F5C518"; // pending
+    }
+    if (applied) return "#2E7D5A";
+    return "#4CAF50"; // default apply color
+  };
+
+  const statusColor = getStatusColor();
+  const hasApp = !!application || applied;
+
   return (
     <TouchableOpacity style={styles.card} onPress={() => router.push(`/scheme/${scheme.id}`)}>
       <View style={styles.header}>
@@ -102,32 +125,60 @@ export default function SchemeCard({ scheme, language }: Props) {
       )}
 
       <View style={styles.benefitRow}>
-        <Ionicons name="cash-outline" size={16} color="#4CAF50" />
+        <Ionicons name="cash-outline" size={16} color="#81C784" />
         <Text style={styles.benefit}>{scheme.benefit}</Text>
       </View>
       <Text style={styles.ministry}>{scheme.ministry}</Text>
 
-      <View style={styles.footer}>
-        <TouchableOpacity
-          style={styles.callButton}
-          onPress={() => Linking.openURL(`tel:${scheme.department?.helpline}`)}
-        >
-          <Ionicons name="call" size={14} color="#0A3728" />
-          <Text style={styles.callText}>Helpline</Text>
-        </TouchableOpacity>
+      {/* Admin Remarks inside the card if rejected/approved */}
+      {application?.remarks ? (
+        <View style={styles.remarksContainer}>
+          <Text style={styles.remarksTitle}>Remarks:</Text>
+          <Text style={styles.remarksText}>{application.remarks}</Text>
+        </View>
+      ) : null}
 
-        {/* In-App Apply Button */}
+      <View style={styles.footer}>
+        {scheme.department?.helpline ? (
+          <TouchableOpacity
+            style={styles.callButton}
+            onPress={() => Linking.openURL(`tel:${scheme.department.helpline}`)}
+          >
+            <Ionicons name="call" size={14} color="#0A3728" />
+            <Text style={styles.callText}>Helpline</Text>
+          </TouchableOpacity>
+        ) : null}
+
+        {/* In-App Apply / Status Button */}
         <TouchableOpacity
-          style={[styles.inAppApplyBtn, applied && styles.appliedBtn]}
+          style={[
+            styles.inAppApplyBtn,
+            { backgroundColor: statusColor }
+          ]}
           onPress={handleApply}
-          disabled={applying || applied}
+          disabled={applying || hasApp}
         >
           {applying ? (
             <ActivityIndicator size="small" color="#0A3728" />
           ) : (
             <>
-              <Ionicons name={applied ? "checkmark-circle" : "send"} size={13} color="#0A3728" />
-              <Text style={styles.inAppApplyText}>{applied ? "Applied ✓" : "Apply in App"}</Text>
+              <Ionicons 
+                name={application ? (STATUS_ICON[application.status] as any) : "send"} 
+                size={13} 
+                color={application?.status === "pending" ? "#0A3728" : "#FFFFFF"} 
+              />
+              <Text 
+                style={[
+                  styles.inAppApplyText,
+                  { color: application?.status === "pending" ? "#0A3728" : "#FFFFFF" }
+                ]}
+              >
+                {application 
+                  ? application.status.toUpperCase() 
+                  : applied 
+                  ? "APPLIED" 
+                  : "Apply in App"}
+              </Text>
             </>
           )}
         </TouchableOpacity>
@@ -153,6 +204,24 @@ const styles = StyleSheet.create({
   benefitRow: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4 },
   benefit: { fontSize: 13, color: "#81C784", fontWeight: "600", flex: 1 },
   ministry: { fontSize: 12, color: "#A8D5B5", marginBottom: 12 },
+  remarksContainer: {
+    backgroundColor: "#0A3728",
+    padding: 8,
+    borderRadius: 8,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#2E7D5A",
+  },
+  remarksTitle: {
+    fontSize: 11,
+    color: "#F5C518",
+    fontWeight: "700",
+  },
+  remarksText: {
+    fontSize: 12,
+    color: "#FFFFFF",
+    marginTop: 2,
+  },
   footer: { flexDirection: "row", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" },
   callButton: {
     flexDirection: "row", alignItems: "center", gap: 4,
@@ -160,11 +229,14 @@ const styles = StyleSheet.create({
   },
   callText: { fontSize: 12, fontWeight: "600", color: "#0A3728" },
   inAppApplyBtn: {
-    flexDirection: "row", alignItems: "center", gap: 4,
-    backgroundColor: "#4CAF50", borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
   },
-  appliedBtn: { backgroundColor: "#2E7D5A" },
-  inAppApplyText: { fontSize: 12, fontWeight: "700", color: "#0A3728" },
+  inAppApplyText: { fontSize: 12, fontWeight: "700" },
   applyButton: {
     backgroundColor: "#F5C518", borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7,
   },

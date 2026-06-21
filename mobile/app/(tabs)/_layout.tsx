@@ -103,11 +103,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="applications"
         options={{
-          title: "My Applications",
-          tabBarLabel: "Applied",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="document-text" size={size} color={color} />
-          ),
+          href: null,
         }}
       />
     </Tabs>
