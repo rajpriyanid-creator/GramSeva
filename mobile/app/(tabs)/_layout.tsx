@@ -1,11 +1,11 @@
 import { useEffect } from "react";
 import { Tabs, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { Alert } from "react-native";
+import { Alert, TouchableOpacity } from "react-native";
 import { useSessionStore } from "@/store/session.store";
 
 export default function TabsLayout() {
-  const { language, user, token } = useSessionStore();
+  const { language, user, token, logout } = useSessionStore();
   const router = useRouter();
 
   useEffect(() => {
@@ -41,6 +41,26 @@ export default function TabsLayout() {
           tabBarLabel: "Home",
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="home" size={size} color={color} />
+          ),
+          headerRight: () => (
+            <TouchableOpacity
+              onPress={() => {
+                Alert.alert("Logout", "Are you sure you want to logout?", [
+                  { text: "Cancel", style: "cancel" },
+                  {
+                    text: "Logout",
+                    style: "destructive",
+                    onPress: () => {
+                      logout();
+                      router.replace("/login");
+                    },
+                  },
+                ]);
+              }}
+              style={{ marginRight: 16 }}
+            >
+              <Ionicons name="log-out-outline" size={22} color="#F5C518" />
+            </TouchableOpacity>
           ),
         }}
       />

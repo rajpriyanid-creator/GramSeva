@@ -12,8 +12,14 @@ import { useSessionStore } from "@/store/session.store";
 import { LANGUAGES } from "@/constants/languages";
 
 export default function LanguageSelector() {
-  const { setLanguage, isLoggedIn, user } = useSessionStore();
+  const { setLanguage, isLoggedIn, user, language } = useSessionStore();
   const [selected, setSelected] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (isLoggedIn && user && language) {
+      router.replace("/(tabs)/home");
+    }
+  }, [isLoggedIn, user, language]);
 
   const handleSelect = (lang: (typeof LANGUAGES)[0]) => {
     setSelected(lang.code);

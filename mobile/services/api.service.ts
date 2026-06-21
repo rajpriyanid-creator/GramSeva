@@ -92,8 +92,8 @@ export const ApiService = {
   },
 
   // ─── AI Chat ───────────────────────────────────────────────────────────
-  async chat(messages: Array<{ role: string; content: string }>, language_code?: string) {
-    const res = await api.post("/api/chat", { messages, language_code });
+  async chat(messages: Array<{ role: string; content: string }>, language_code?: string, userId?: string) {
+    const res = await api.post("/api/chat", { messages, language_code, userId });
     return res.data;
   },
 

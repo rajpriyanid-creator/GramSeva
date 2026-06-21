@@ -24,7 +24,7 @@ interface Message {
 }
 
 export default function ChatScreen() {
-  const { language } = useSessionStore();
+  const { language, user } = useSessionStore();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "welcome",
@@ -61,7 +61,7 @@ export default function ChatScreen() {
         .concat(userMessage)
         .map((m) => ({ role: m.role, content: m.content }));
 
-      const data = await ApiService.chat(history, language?.code || "hi-IN");
+      const data = await ApiService.chat(history, language?.code || "hi-IN", user?.id);
 
       const botMessage: Message = {
         id: `msg_${Date.now()}_a`,

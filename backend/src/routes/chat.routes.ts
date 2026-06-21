@@ -5,10 +5,9 @@ import { textToSpeech } from "../services/sarvam.service";
 
 export const chatRouter = Router();
 
-// ─── POST /api/chat ────────────────────────────────────────────────────────
 chatRouter.post("/", async (req: Request, res: Response) => {
   try {
-    const { messages, language_code } = req.body;
+    const { messages, language_code, userId } = req.body;
     if (!messages || !Array.isArray(messages)) {
       return res.status(400).json({ error: "messages array is required" });
     }
@@ -25,11 +24,38 @@ chatRouter.post("/", async (req: Request, res: Response) => {
       schemesContext += `- Scheme ID: ${s.id}\n  Name: ${s.name}\n  Benefit: ${s.benefit}\n  Ministry: ${s.ministry}\n  Type: ${s.type}\n  Criteria requirements: ${s.criteria.join(", ") || "None"}\n\n`;
     });
 
+    // 2. Fetch user profile if logged in
+    let userContext = "";
+    if (userId) {
+      const userRes = await runQuery(`
+        MATCH (u:User {id: $userId})
+        RETURN u
+      `, { userId });
+      if (userRes && userRes.length > 0) {
+        const u = userRes[0].u.properties;
+        userContext = `\nThe current user interacting with you is:
+- Name: ${u.name}
+- GramSeva ID: ${u.gramsevaId}
+- Age: ${u.age}
+- Gender: ${u.gender}
+- State: ${u.state}
+- District: ${u.district || "Not set"}
+- Occupation: ${u.occupation}
+- Annual Income: INR ${u.annual_income}
+- Land owned (Acres): ${u.land_acres}
+- BPL Card Holder: ${u.bpl_card}
+- Caste Category: ${u.caste_category}
+
+Please use this user's profile details to assess if they qualify for the schemes listed below, reference their specific attributes directly to provide clear, customized assistance, and answer in their query's language.`;
+      }
+    }
+
     const systemPrompt = `You are "GramSeva Assistant", a helpful, friendly AI assistant for Indian rural citizens.
 Use the following database schemes to answer the user's questions about eligibility, benefits, and how to apply.
 If the scheme they ask about is not listed, politely let them know and try to suggest the closest alternative from our database.
 Keep your answers brief, clear, and easy to understand for rural citizens.
 Answer in the language of the user query (e.g., Hindi, Tamil, Telugu, English, etc.).
+${userContext}
 
 ${schemesContext}`;
 
