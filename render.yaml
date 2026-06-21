@@ -1,0 +1,40 @@
+services:
+  - type: web
+    name: gramseva-api
+    runtime: node
+    rootDir: backend
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    plan: starter
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEO4J_URI
+        sync: false
+      - key: NEO4J_USERNAME
+        sync: false
+      - key: NEO4J_PASSWORD
+        sync: false
+      - key: SARVAM_API_KEY
+        sync: false
+    healthCheckPath: /health
+    autoDeploy: true
+
+crons:
+  - name: scheme-sync
+    runtime: node
+    rootDir: .
+    schedule: "0 19 * * *"
+    buildCommand: npm ci --prefix backend
+    command: node render-workflows/scripts/fetch-myscheme.js && node render-workflows/scripts/parse-scheme-pdfs.js && node render-workflows/scripts/update-neo4j.js && node render-workflows/scripts/fetch-csc.js && node render-workflows/scripts/update-csc-neo4j.js && node render-workflows/scripts/validate-graph.js
+    envVars:
+      - key: NEO4J_URI
+        sync: false
+      - key: NEO4J_USERNAME
+        sync: false
+      - key: NEO4J_PASSWORD
+        sync: false
+      - key: DATA_GOV_API_KEY
+        sync: false
+      - key: SLACK_WEBHOOK
+        sync: false

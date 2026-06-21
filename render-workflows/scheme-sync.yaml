@@ -1,0 +1,45 @@
+name: GramSeva Scheme Sync
+schedule: "0 1 * * *"   # 1 AM IST daily (UTC 19:30 prev day)
+
+env:
+  NEO4J_URI:      $NEO4J_URI
+  NEO4J_USERNAME: $NEO4J_USERNAME
+  NEO4J_PASSWORD: $NEO4J_PASSWORD
+  SARVAM_API_KEY: $SARVAM_API_KEY
+
+jobs:
+  sync-schemes:
+    name: Fetch + Parse + Load schemes into Neo4j
+    runtime: node-20
+    steps:
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Fetch schemes from MyScheme API
+        run: node render-workflows/scripts/fetch-myscheme.js
+        env:
+          MYSCHEME_API_BASE: https://api.myscheme.gov.in/v2
+
+      - name: Parse scheme PDFs and extract structured data
+        run: node render-workflows/scripts/parse-scheme-pdfs.js
+
+      - name: Update Neo4j graph with parsed schemes
+        run: node render-workflows/scripts/update-neo4j.js
+
+      - name: Fetch CSC locations from data.gov.in
+        run: node render-workflows/scripts/fetch-csc.js
+        env:
+          DATA_GOV_API_KEY: $DATA_GOV_API_KEY
+
+      - name: Update Neo4j with CSC data
+        run: node render-workflows/scripts/update-csc-neo4j.js
+
+      - name: Validate graph integrity
+        run: node render-workflows/scripts/validate-graph.js
+
+  on_failure:
+    steps:
+      - name: Notify failure
+        run: node render-workflows/scripts/notify-failure.js
+        env:
+          SLACK_WEBHOOK: $SLACK_WEBHOOK
