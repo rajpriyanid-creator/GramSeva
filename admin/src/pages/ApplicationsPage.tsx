@@ -48,6 +48,7 @@ const STATUS_COLORS = { pending: "#F5C518", approved: "#4CAF50", rejected: "#F44
 const STATUS_BG = { pending: "#F5C51822", approved: "#4CAF5022", rejected: "#F4433622" };
 
 export default function ApplicationsPage() {
+  const apiUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || "";
   const [apps, setApps] = useState<Application[]>([]);
   const [summary, setSummary] = useState<Summary>({ total: 0, pending: 0, approved: 0, rejected: 0 });
   const [loading, setLoading] = useState(true);
@@ -67,7 +68,7 @@ export default function ApplicationsPage() {
         ...(filter !== "all" && { status: filter }),
         ...(search && { search }),
       });
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/applications?${params}`, {
+      const res = await fetch(`${apiUrl}/api/applications?${params}`, {
         headers: { "x-admin-key": import.meta.env.VITE_ADMIN_KEY || "" }
       });
       const data = await res.json();
@@ -88,7 +89,7 @@ export default function ApplicationsPage() {
     if (!selected) return;
     setSaving(true);
     try {
-      await fetch(`${import.meta.env.VITE_API_URL}/api/applications/${selected.id}/status`, {
+      await fetch(`${apiUrl}/api/applications/${selected.id}/status`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

@@ -37,7 +37,7 @@ services:
         source: /*
         destination: /index.html
     envVars:
-      - key: VITE_API_BASE_URL
+      - key: VITE_API_URL
         sync: false # Connect this to the deployed gramseva-api URL
 
 # Note: Cron jobs are a paid feature on Render ($1+/month).

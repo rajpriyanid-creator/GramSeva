@@ -70,9 +70,9 @@ export default function DashboardPage() {
 
       {/* ── KPI Row ── */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(190px, 1fr))", gap: 16, marginBottom: 28 }}>
-        <StatCard label="Active Schemes"    value={stats.graph.Scheme  || 0}  accent="var(--gold)"   icon={<Layers size={18}/>}   />
-        <StatCard label="Criteria Nodes"    value={stats.graph.Criteria|| 0}  accent="var(--green)"  icon={<Database size={18}/>} />
-        <StatCard label="CSC Centres"       value={stats.graph.CSC     || 0}  accent="var(--blue)"   icon={<MapPin size={18}/>}   />
+        <StatCard label="Active Schemes"    value={stats.graph.schemes || 0}  accent="var(--gold)"   icon={<Layers size={18}/>}   />
+        <StatCard label="Criteria Nodes"    value={stats.graph.criteria|| 0}  accent="var(--green)"  icon={<Database size={18}/>} />
+        <StatCard label="CSC Centres"       value={stats.graph.cscs    || 0}  accent="var(--blue)"   icon={<MapPin size={18}/>}   />
         <StatCard label="Languages"         value={10}                         accent="var(--purple)" icon={<Languages size={18}/>}/>
         <StatCard label="Queries Today"     value={a.queries_today}            accent="var(--gold)"   icon={<TrendingUp size={18}/>}/>
         <StatCard label="This Week"         value={a.queries_this_week}        accent="var(--orange)" icon={<Clock size={18}/>}    />
@@ -190,9 +190,9 @@ export default function DashboardPage() {
               { label: "Orphan Schemes",          val: stats.orphan_schemes,           ok: stats.orphan_schemes === 0 },
               { label: "Avg Criteria / Scheme",   val: stats.avg_criteria_per_scheme,   ok: stats.avg_criteria_per_scheme >= 1 },
               { label: "Max Criteria on 1 Scheme",val: stats.max_criteria_per_scheme,   ok: true },
-              { label: "Departments",             val: stats.graph.Department || 0,     ok: (stats.graph.Department || 0) > 0 },
-              { label: "States Covered",          val: stats.graph.State     || 0,      ok: (stats.graph.State     || 0) >= 10 },
-              { label: "Districts",               val: stats.graph.District  || 0,      ok: true },
+              { label: "Departments",             val: stats.graph.departments || 0,    ok: (stats.graph.departments || 0) > 0 },
+              { label: "States Covered",          val: stats.graph.states      || 0,    ok: (stats.graph.states      || 0) >= 10 },
+              { label: "Districts",               val: stats.graph.districts   || 0,    ok: true },
             ].map(({ label, val, ok }) => (
               <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
                 <span style={{ fontSize: 12, color: "var(--text-2)" }}>{label}</span>
