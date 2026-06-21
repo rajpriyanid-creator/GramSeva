@@ -328,7 +328,7 @@ export default function ProfileSetupScreen() {
         ))}
       </ScrollView>
 
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "padding"} style={{ flex: 1 }}>
         <ScrollView style={s.form} contentContainerStyle={{ padding: 20, paddingBottom: 100 }} keyboardShouldPersistTaps="handled">
 
           {section === "personal" && (
