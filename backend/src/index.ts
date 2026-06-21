@@ -1,4 +1,4 @@
-import express from "express";
+import express, { Request, Response } from "express";
 import cors from "cors";
 import helmet from "helmet";
 import { eligibilityRouter } from "./routes/eligibility.routes";
@@ -32,7 +32,7 @@ app.use("/api/auth", authRouter);
 app.use("/api/applications", applicationsRouter);
 app.use("/api/chat", chatRouter);
 
-app.get("/health", (_, res) =>
+app.get("/health", (_: Request, res: Response) =>
   res.json({ status: "ok", service: "GramSeva API", timestamp: new Date().toISOString() })
 );
 

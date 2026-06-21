@@ -4,7 +4,7 @@ services:
     name: gramseva-api
     runtime: node
     rootDir: backend
-    buildCommand: npm install --include=dev && npm run build
+    buildCommand: NODE_ENV=development npm install && npm run build
     startCommand: npm start
     plan: free
     healthCheckPath: /health
@@ -26,7 +26,7 @@ services:
     name: gramseva-admin
     runtime: static
     rootDir: admin
-    buildCommand: npm install --include=dev && npm run build
+    buildCommand: NODE_ENV=development npm install && npm run build
     staticPublishPath: dist
     headers:
       - path: /*
