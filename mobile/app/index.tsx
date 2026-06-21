@@ -7,19 +7,23 @@ import {
   SafeAreaView,
   FlatList,
 } from "react-native";
-import { router } from "expo-router";
+import { useRouter, useRootNavigationState } from "expo-router";
 import { useSessionStore } from "@/store/session.store";
 import { LANGUAGES } from "@/constants/languages";
 
 export default function LanguageSelector() {
   const { setLanguage, isLoggedIn, user, language } = useSessionStore();
   const [selected, setSelected] = useState<string | null>(null);
+  const router = useRouter();
+  const rootNavigationState = useRootNavigationState();
 
   React.useEffect(() => {
+    if (!rootNavigationState?.key) return;
+
     if (isLoggedIn && user && language) {
       router.replace("/(tabs)/home");
     }
-  }, [isLoggedIn, user, language]);
+  }, [isLoggedIn, user, language, rootNavigationState?.key]);
 
   const handleSelect = (lang: (typeof LANGUAGES)[0]) => {
     setSelected(lang.code);

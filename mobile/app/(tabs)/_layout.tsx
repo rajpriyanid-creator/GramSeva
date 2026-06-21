@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Tabs, useRouter } from "expo-router";
+import { Tabs, useRouter, useRootNavigationState } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Alert, TouchableOpacity } from "react-native";
 import { useSessionStore } from "@/store/session.store";
@@ -7,8 +7,11 @@ import { useSessionStore } from "@/store/session.store";
 export default function TabsLayout() {
   const { language, user, token, logout } = useSessionStore();
   const router = useRouter();
+  const rootNavigationState = useRootNavigationState();
 
   useEffect(() => {
+    if (!rootNavigationState?.key) return;
+
     // If the user has logged in but their profile is not complete,
     // force them to complete their details first.
     if (token && user && user.profileComplete === false) {
@@ -18,7 +21,7 @@ export default function TabsLayout() {
       );
       router.replace("/profile-setup");
     }
-  }, [user, token]);
+  }, [user, token, rootNavigationState?.key]);
 
   return (
     <Tabs
