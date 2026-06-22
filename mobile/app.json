@@ -44,7 +44,8 @@
         {
           "locationAlwaysAndWhenInUsePermission": "Allow GramSeva to access your location to find nearby Common Service Centres."
         }
-      ]
+      ],
+      "expo-font"
     ],
     "scheme": "gramseva",
     "experiments": {
