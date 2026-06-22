@@ -41,7 +41,7 @@ export default function SchemeDetailScreen() {
   const downloadChecklist = async () => {
     setDownloadingPDF(true);
     try {
-      const url = `${process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000"}/api/pdf/checklist/${id}`;
+      const url = `${process.env.EXPO_PUBLIC_API_URL || "https://gramseva-api-c102.onrender.com"}/api/pdf/checklist/${id}`;
       const fileUri = `${FileSystem.documentDirectory}GramSeva-${id}-checklist.pdf`;
       await FileSystem.downloadAsync(url, fileUri);
       Alert.alert(
