@@ -12,19 +12,8 @@ chatRouter.post("/", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "messages array is required" });
     }
 
-    // 1. Fetch active schemes from Neo4j to build context
-    const dbSchemes = await runQuery(`
-      MATCH (s:Scheme {active: true})
-      OPTIONAL MATCH (s)-[:REQUIRES]->(c:Criteria)
-      RETURN s.id AS id, s.name AS name, s.benefit AS benefit, s.ministry AS ministry, s.type AS type, collect(c.label) AS criteria
-    `);
-
-    let schemesContext = "Here are the government schemes available in our database:\n";
-    dbSchemes.forEach((s: any) => {
-      schemesContext += `- Scheme ID: ${s.id}\n  Name: ${s.name}\n  Benefit: ${s.benefit}\n  Ministry: ${s.ministry}\n  Type: ${s.type}\n  Criteria requirements: ${s.criteria.join(", ") || "None"}\n\n`;
-    });
-
-    // 2. Fetch user profile if logged in
+    // 1. Fetch user profile if logged in
+    let userState = null;
     let userContext = "";
     if (userId) {
       const userRes = await runQuery(`
@@ -33,6 +22,7 @@ chatRouter.post("/", async (req: Request, res: Response) => {
       `, { userId });
       if (userRes && userRes.length > 0) {
         const u = userRes[0].u.properties;
+        userState = u.state;
 
         // Fetch user's applied schemes
         const appRes = await runQuery(`
@@ -65,6 +55,19 @@ Please use this user's profile details and applied schemes status to assess if t
       }
     }
 
+    // 2. Fetch active schemes from Neo4j (filtered by state if user is logged in)
+    const dbSchemes = await runQuery(`
+      MATCH (s:Scheme {active: true})-[:AVAILABLE_IN]->(st:State)
+      WHERE st.code = 'ALL' OR ($userState IS NOT NULL AND st.name = $userState)
+      OPTIONAL MATCH (s)-[:REQUIRES]->(c:Criteria)
+      RETURN s.id AS id, s.name AS name, s.benefit AS benefit, s.ministry AS ministry, s.type AS type, collect(c.label) AS criteria
+    `, { userState });
+
+    let schemesContext = "Here are the government schemes available in our database:\n";
+    dbSchemes.forEach((s: any) => {
+      schemesContext += `- Scheme ID: ${s.id}\n  Name: ${s.name}\n  Benefit: ${s.benefit}\n  Ministry: ${s.ministry}\n  Type: ${s.type}\n  Criteria requirements: ${s.criteria.join(", ") || "None"}\n\n`;
+    });
+
     const systemPrompt = `You are "GramSeva Assistant", a helpful, friendly AI assistant for Indian rural citizens.
 Use the following database schemes to answer the user's questions about eligibility, benefits, and how to apply.
 If the scheme they ask about is not listed, politely let them know and try to suggest the closest alternative from our database.
@@ -74,7 +77,7 @@ ${userContext}
 
 ${schemesContext}`;
 
-    // 2. Call Sarvam AI Chat Completion API
+    // 3. Call Sarvam AI Chat Completion API
     const response = await axios.post("https://api.sarvam.ai/v1/chat/completions", {
       model: "sarvam-105b",
       messages: [
@@ -82,7 +85,8 @@ ${schemesContext}`;
         ...messages
       ],
       temperature: 0.5,
-      max_tokens: 1500
+      max_tokens: 1500,
+      reasoning_effort: null
     }, {
       headers: {
         "api-subscription-key": process.env.SARVAM_API_KEY!,
