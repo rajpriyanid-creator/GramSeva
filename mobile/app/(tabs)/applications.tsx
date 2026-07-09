@@ -7,6 +7,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useSessionStore } from "@/store/session.store";
 import { ApiService } from "@/services/api.service";
+import { TRANSLATIONS } from "@/constants/translations";
 
 interface Application {
   id: string;
@@ -24,7 +25,10 @@ const STATUS_COLOR = { pending: "#F5C518", approved: "#4CAF50", rejected: "#F443
 const STATUS_ICON = { pending: "time-outline", approved: "checkmark-circle", rejected: "close-circle" };
 
 export default function ApplicationsTab() {
-  const { user, isLoggedIn } = useSessionStore();
+  const { user, isLoggedIn, language } = useSessionStore();
+  const activeLang = language?.code || "en-IN";
+  const t = TRANSLATIONS[activeLang] || TRANSLATIONS["en-IN"];
+
   const [apps, setApps] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -49,10 +53,10 @@ export default function ApplicationsTab() {
       <SafeAreaView style={s.container}>
         <View style={s.center}>
           <Ionicons name="lock-closed-outline" size={64} color="#A8D5B5" />
-          <Text style={s.emptyTitle}>Login Required</Text>
-          <Text style={s.emptyText}>Login to view your scheme applications</Text>
+          <Text style={s.emptyTitle}>{t.loginRequired}</Text>
+          <Text style={s.emptyText}>{t.loginRequiredText}</Text>
           <TouchableOpacity style={s.loginBtn} onPress={() => router.push("/login")}>
-            <Text style={s.loginBtnText}>Login / Register</Text>
+            <Text style={s.loginBtnText}>{t.loginRegister}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -78,15 +82,15 @@ export default function ApplicationsTab() {
           contentContainerStyle={s.scroll}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor="#F5C518" />}
         >
-          <Text style={s.sectionTitle}>My Applications ({apps.length})</Text>
+          <Text style={s.sectionTitle}>{t.myApplications} ({apps.length})</Text>
 
           {apps.length === 0 ? (
             <View style={s.emptyBox}>
               <Ionicons name="document-outline" size={48} color="#A8D5B5" />
-              <Text style={s.emptyTitle}>No Applications Yet</Text>
-              <Text style={s.emptyText}>Find eligible schemes from the Home tab and apply in seconds.</Text>
+              <Text style={s.emptyTitle}>{t.noApplicationsYet}</Text>
+              <Text style={s.emptyText}>{t.findSchemesHelp}</Text>
               <TouchableOpacity style={s.loginBtn} onPress={() => router.replace("/(tabs)/home")}>
-                <Text style={s.loginBtnText}>Find Schemes</Text>
+                <Text style={s.loginBtnText}>{t.findSchemes}</Text>
               </TouchableOpacity>
             </View>
           ) : (

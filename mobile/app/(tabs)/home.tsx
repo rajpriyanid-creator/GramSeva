@@ -18,8 +18,10 @@ import { useSessionStore } from "@/store/session.store";
 import { useSchemesStore } from "@/store/schemes.store";
 import { ApiService } from "@/services/api.service";
 import { AudioService } from "@/services/audio.service";
+import { TRANSLATIONS } from "@/constants/translations";
 import { QUESTIONS } from "@/constants/questions";
 import QuestionFlow from "@/components/QuestionFlow";
+import { getTranslatedSchemeName } from "@/constants/schemeTranslations";
 
 type Step = "intro" | "questions" | "processing" | "results";
 
@@ -187,31 +189,7 @@ export default function HomeScreen() {
 
   const activeLang = language?.code || "en-IN";
 
-  // Localized Strings
-  const t = {
-    welcome: activeLang === "ta-IN" ? "வரவேற்கிறோம்" : activeLang === "hi-IN" ? "स्वागत है" : "Welcome back",
-    eligibleTitle: activeLang === "ta-IN" ? "தகுதியான திட்டங்கள்" : activeLang === "hi-IN" ? "पात्र योजनाएं" : "Eligible Schemes",
-    appliedTitle: activeLang === "ta-IN" ? "விண்ணப்பித்தவை" : activeLang === "hi-IN" ? "आवेदन इतिहास" : "Applied Schemes",
-    viewAll: activeLang === "ta-IN" ? "அனைத்தையும் பார்" : activeLang === "hi-IN" ? "सभी देखें" : "View Details",
-    servicesHeader: activeLang === "ta-IN" ? "விரைவு சேவைகள்" : activeLang === "hi-IN" ? "त्वरित सेवाएं" : "Quick Services",
-    
-    // Services
-    voiceTitle: activeLang === "ta-IN" ? "வாய்ஸ் தகுதி சரிபார்ப்பு" : activeLang === "hi-IN" ? "वॉइस पात्रता जाँच" : "Voice Questionnaire",
-    voiceSub: activeLang === "ta-IN" ? "பேசி தகுதியை கண்டறியவும்" : activeLang === "hi-IN" ? "बोलकर अपनी पात्रता जांचें" : "Answer questions by speaking",
-    
-    chatTitle: activeLang === "ta-IN" ? "எஐ உரையாடல்" : activeLang === "hi-IN" ? "एआई चैट सहायक" : "AI Assistant Chat",
-    chatSub: activeLang === "ta-IN" ? "திட்டங்கள் பற்றி கேளுங்கள்" : activeLang === "hi-IN" ? "योजनाओं के बारे में पूछें" : "Ask doubts via voice/text",
-    
-    cscTitle: activeLang === "ta-IN" ? "அருகிலுள்ள இ-சேவை மையம்" : activeLang === "hi-IN" ? "नजदीकी सीएससी सेंटर" : "Locate CSC Centers",
-    cscSub: activeLang === "ta-IN" ? "இருப்பிடத்தை கண்டறியவும்" : activeLang === "hi-IN" ? "अपने पास का सीएससी खोजें" : "Find nearby Common Service Centers",
-    
-    tipsTitle: activeLang === "ta-IN" ? "உங்களுக்கு தெரியுமா?" : activeLang === "hi-IN" ? "क्या आप जानते हैं?" : "Did you know?",
-    tipsSub: activeLang === "ta-IN" 
-      ? "உங்கள் ஆதார் மற்றும் வங்கி கணக்கு புத்தகம் எப்போதும் கைவசம் வைத்திருக்கவும்." 
-      : activeLang === "hi-IN" 
-      ? "योजनाओं में तेजी से आवेदन के लिए आधार और बैंक पासबुक तैयार रखें।" 
-      : "Keep your Aadhaar Card and Bank Passbook ready for faster scheme processing.",
-  };
+  const t = TRANSLATIONS[activeLang] || TRANSLATIONS["en-IN"];
 
   if (step === "intro" && token && user) {
     return (
@@ -379,7 +357,9 @@ export default function HomeScreen() {
           <ScrollView contentContainerStyle={styles.scrollContent}>
             {schemes.map((scheme) => (
               <View key={scheme.id} style={{ marginBottom: 12 }}>
-                <Text style={{ color: "#FFF" }}>{scheme.name}</Text>
+                <Text style={{ color: "#FFF" }}>
+                  {getTranslatedSchemeName(scheme, language?.code || "en-IN")}
+                </Text>
               </View>
             ))}
           </ScrollView>

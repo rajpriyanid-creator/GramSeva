@@ -162,7 +162,8 @@ eligibilityRouter.post(
         OPTIONAL MATCH (s)-[:OFFERED_BY]->(d:Department)
         RETURN s {
           .id, .name, .name_hi, .name_ta, .name_te, .name_kn,
-          .name_mr, .name_bn, .benefit, .ministry, .type, .url,
+          .name_mr, .name_bn, .name_gu, .name_ml, .name_or, .name_pa,
+          .benefit, .ministry, .type, .url,
           department: CASE WHEN d IS NOT NULL THEN d { .name, .helpline, .portal } ELSE null END,
           matched: size(satisfiedCriteria),
           total:   size(allCriteria)

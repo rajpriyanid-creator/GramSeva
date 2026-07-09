@@ -11,6 +11,7 @@ import { applicationsRouter } from "./routes/applications.routes";
 import { chatRouter } from "./routes/chat.routes";
 import { neo4jDriver } from "./db/neo4j";
 import { trackTranscribe, trackFindSchemes, requestLogger } from "./middleware/analytics.middleware";
+import { startKeepAlive } from "./services/keepalive.service";
 
 const app = express();
 
@@ -44,6 +45,7 @@ app.listen(PORT, async () => {
   try {
     await neo4jDriver.verifyConnectivity();
     console.log(`✅ Neo4j connected`);
+    startKeepAlive();
   } catch (err) {
     console.error("❌ Neo4j connection failed:", err);
   }

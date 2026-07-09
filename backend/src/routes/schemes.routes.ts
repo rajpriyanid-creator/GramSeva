@@ -17,7 +17,8 @@ schemesRouter.get("/", async (req: Request, res: Response) => {
       WHERE $state IS NULL OR 'ALL' IN states OR $state IN states
       RETURN s {
         .id, .name, .name_hi, .name_ta, .name_te, .name_kn,
-        .name_mr, .name_bn, .benefit, .ministry, .type, .url,
+        .name_mr, .name_bn, .name_gu, .name_ml, .name_or, .name_pa,
+        .benefit, .ministry, .type, .url,
         department: CASE WHEN d IS NOT NULL THEN { name: d.name, helpline: d.helpline, portal: d.portal } ELSE { name: '', helpline: '', portal: '' } END,
         criteria_count: ccount,
         states: states
@@ -55,7 +56,8 @@ schemesRouter.get("/:id", async (req: Request, res: Response) => {
       WITH s, d, collect(DISTINCT c { .id, .field, .operator, .value, .label }) AS criteriaList, collect(DISTINCT st.code) AS stateCodes
       RETURN s {
         .id, .name, .name_hi, .name_ta, .name_te, .name_kn,
-        .name_mr, .name_bn, .benefit, .ministry, .type, .url,
+        .name_mr, .name_bn, .name_gu, .name_ml, .name_or, .name_pa,
+        .benefit, .ministry, .type, .url,
         department: CASE WHEN d IS NOT NULL THEN d { .name, .helpline, .portal } ELSE null END,
         criteria: criteriaList,
         states:   stateCodes
@@ -85,7 +87,9 @@ schemesRouter.get("/by-type/:type", async (req: Request, res: Response) => {
       `
       MATCH (s:Scheme {active: true, type: $type})-[:OFFERED_BY]->(d:Department)
       RETURN s {
-        .id, .name, .name_hi, .name_ta, .benefit, .ministry, .type, .url,
+        .id, .name, .name_hi, .name_ta, .name_te, .name_kn,
+        .name_mr, .name_bn, .name_gu, .name_ml, .name_or, .name_pa,
+        .benefit, .ministry, .type, .url,
         department: d { .name, .helpline }
       } AS scheme
       ORDER BY scheme.name

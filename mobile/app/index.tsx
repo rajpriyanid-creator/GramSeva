@@ -28,7 +28,7 @@ export default function LanguageSelector() {
     }
   }, [isLoggedIn, user, language, rootNavigationState?.key]);
 
-  const handleSelect = (lang: (typeof LANGUAGES)[0]) => {
+  const handleSelect = (lang: (typeof LANGUAGES)[number]) => {
     setSelected(lang.code);
     setLanguage(lang);
     // If already logged in, go straight to home

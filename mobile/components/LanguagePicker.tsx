@@ -11,7 +11,7 @@ import { LANGUAGES } from "@/constants/languages";
 
 interface Props {
   selected: string | null;
-  onSelect: (lang: (typeof LANGUAGES)[0]) => void;
+  onSelect: (lang: (typeof LANGUAGES)[number]) => void;
   visible: boolean;
   onClose: () => void;
 }

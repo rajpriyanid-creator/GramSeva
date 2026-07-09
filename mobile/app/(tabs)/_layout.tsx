@@ -93,8 +93,8 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="results"
         options={{
-          title: "My Results",
-          tabBarLabel: "Results",
+          title: "Status",
+          tabBarLabel: "Status",
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="checkmark-circle" size={size} color={color} />
           ),

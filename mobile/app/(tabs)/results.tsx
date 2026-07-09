@@ -14,6 +14,7 @@ import { useSessionStore } from "@/store/session.store";
 import { useSchemesStore } from "@/store/schemes.store";
 import { ApiService } from "@/services/api.service";
 import SchemeCard from "@/components/SchemeCard";
+import { TRANSLATIONS } from "@/constants/translations";
 
 export default function ResultsScreen() {
   const { language, user } = useSessionStore();
@@ -51,18 +52,7 @@ export default function ResultsScreen() {
 
   const activeLang = language?.code || "en-IN";
 
-  // Localized texts
-  const t = {
-    emptyTitle: activeLang === "ta-IN" ? "முடிவுகள் இன்னும் இல்லை" : activeLang === "hi-IN" ? "अभी तक कोई परिणाम नहीं" : "No results yet",
-    emptyText: activeLang === "ta-IN" 
-      ? "திட்டங்களைக் கண்டறிய உங்கள் சுயவிவரத்தைப் பூர்த்தி செய்யவும் அல்லது முகப்புப் பக்கத்தில் வாய்ஸ் தேடலைத் தொடங்கவும்." 
-      : activeLang === "hi-IN" 
-      ? "आप किन योजनाओं के लिए पात्र हैं, यह देखने के लिए प्रोफ़ाइल पूरी करें या होम टैब पर वॉइस खोज शुरू करें।" 
-      : "Complete your profile or start the voice questionnaire on the Home tab to see which schemes you qualify for.",
-    btnText: activeLang === "ta-IN" ? "வாய்ஸ் தேடலைத் தொடங்கு" : activeLang === "hi-IN" ? "वॉइस खोज शुरू करें" : "Start Voice Query",
-    qualifyText: activeLang === "ta-IN" ? "திட்டங்களுக்கு நீங்கள் தகுதியுடையவர்" : activeLang === "hi-IN" ? "योजनाएं जिनके लिए आप पात्र हैं" : "schemes you qualify for",
-    loadingText: activeLang === "ta-IN" ? "பொருத்தமான திட்டங்களை தேடுகிறது..." : activeLang === "hi-IN" ? "पात्र योजनाओं की खोज जारी है..." : "Checking eligibility...",
-  };
+  const t = TRANSLATIONS[activeLang] || TRANSLATIONS["en-IN"];
 
   const getApplicationForScheme = (schemeId: string) => {
     return applications.find((app) => app.schemeId === schemeId);

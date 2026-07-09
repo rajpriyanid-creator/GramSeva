@@ -14,6 +14,7 @@ import { useSessionStore } from "@/store/session.store";
 import { useSchemesStore } from "@/store/schemes.store";
 import { ApiService } from "@/services/api.service";
 import SchemeCard from "@/components/SchemeCard";
+import { getTranslatedSchemeName } from "@/constants/schemeTranslations";
 
 const TYPES = ["All", "Direct Benefit Transfer", "Health Insurance", "Subsidy", "Scholarship", "Employment Guarantee", "Savings Scheme"];
 
@@ -41,8 +42,10 @@ export default function SchemesScreen() {
   };
 
   const filtered = allSchemes.filter((s) => {
+    const localizedName = getTranslatedSchemeName(s, language?.code || "en-IN");
     const matchSearch =
       s.name.toLowerCase().includes(search.toLowerCase()) ||
+      localizedName.toLowerCase().includes(search.toLowerCase()) ||
       (s.benefit || "").toLowerCase().includes(search.toLowerCase());
     const matchType = selectedType === "All" || s.type === selectedType;
     return matchSearch && matchType;

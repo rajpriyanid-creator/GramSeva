@@ -18,7 +18,7 @@ export const AudioService = {
         allowsRecordingIOS: false,
         playsInSilentModeIOS: true,
         staysActiveInBackground: false,
-        shouldRouteThroughEarpieceAndroid: false,
+        playThroughEarpieceAndroid: false,
       });
 
       const { sound } = await Audio.Sound.createAsync(
@@ -52,7 +52,7 @@ export const AudioService = {
     await Audio.setAudioModeAsync({
       allowsRecordingIOS: true,
       playsInSilentModeIOS: true,
-      shouldRouteThroughEarpieceAndroid: false,
+      playThroughEarpieceAndroid: false,
     });
   },
 
@@ -63,7 +63,7 @@ export const AudioService = {
     await Audio.setAudioModeAsync({
       allowsRecordingIOS: false,
       playsInSilentModeIOS: true,
-      shouldRouteThroughEarpieceAndroid: false,
+      playThroughEarpieceAndroid: false,
     });
   },
 };

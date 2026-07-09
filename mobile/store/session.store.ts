@@ -4,7 +4,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import uuid from "react-native-uuid";
 import { LANGUAGES } from "@/constants/languages";
 
-type Language = (typeof LANGUAGES)[0];
+type Language = (typeof LANGUAGES)[number];
 
 export interface UserProfile {
   age: number;
@@ -35,6 +35,22 @@ export interface AuthUser {
   profileComplete?: boolean;
   gramsevaId?: string;
   profileUpdatedAt?: string;
+  maritalStatus?: string;
+  familySize?: number;
+  educationLevel?: string;
+  community?: string;
+  landType?: string;
+  houseType?: string;
+  disabilityStatus?: boolean;
+  disabilityPercentage?: number;
+  aadhaarNo?: string;
+  rationCardNo?: string;
+  incomeCertNo?: string;
+  communityCertNo?: string;
+  voterId?: string;
+  bankAccountNo?: string;
+  ifscCode?: string;
+  bankName?: string;
 }
 
 interface SessionState {

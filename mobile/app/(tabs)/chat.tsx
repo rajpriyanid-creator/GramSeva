@@ -18,6 +18,7 @@ import * as FileSystem from "expo-file-system";
 import { useSessionStore } from "@/store/session.store";
 import { ApiService } from "@/services/api.service";
 import { AudioService } from "@/services/audio.service";
+import { TRANSLATIONS } from "@/constants/translations";
 
 interface Message {
   id: string;
@@ -28,16 +29,14 @@ interface Message {
 
 export default function ChatScreen() {
   const { language, user } = useSessionStore();
+  const activeLang = language?.code || "en-IN";
+  const t = TRANSLATIONS[activeLang] || TRANSLATIONS["en-IN"];
+
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "welcome",
       role: "assistant",
-      content:
-        language?.code === "hi-IN"
-          ? "नमस्ते! मैं ग्रामसेवा एआई सहायक हूँ। आप मुझसे किसी भी सरकारी योजना या पात्रता के बारे में पूछ सकते हैं।"
-          : language?.code === "ta-IN"
-          ? "வணக்கம்! நான் உங்கள் கிராமசேவை எஐ உதவியாளர். அரசு திட்டங்கள், தகுதி அல்லது விண்ணப்ப விவரங்கள் பற்றி என்னிடம் கேளுங்கள்."
-          : "Hello! I am your GramSeva AI Assistant. Feel free to ask me anything about government schemes, eligibility, or application details.",
+      content: "",
     },
   ]);
   const [inputText, setInputText] = useState("");
@@ -83,7 +82,7 @@ export default function ChatScreen() {
         encoding: FileSystem.EncodingType.Base64,
       });
 
-      const res = await ApiService.rawTranscribe(base64Audio, language?.code || "en-IN");
+      const res = await ApiService.rawTranscribe(base64Audio, activeLang);
       if (res.transcript) {
         setInputText(res.transcript);
       }
@@ -114,9 +113,9 @@ export default function ChatScreen() {
     try {
       const history = messages
         .concat(userMessage)
-        .map((m) => ({ role: m.role, content: m.content }));
+        .map((m) => ({ role: m.role, content: m.id === "welcome" ? t.chatWelcome : m.content }));
 
-      const data = await ApiService.chat(history, language?.code || "hi-IN", user?.id);
+      const data = await ApiService.chat(history, activeLang, user?.id);
 
       const botMessage: Message = {
         id: `msg_${Date.now()}_a`,
@@ -129,7 +128,11 @@ export default function ChatScreen() {
       const botMessage: Message = {
         id: `msg_${Date.now()}_err`,
         role: "assistant",
-        content: "Sorry, I am unable to connect to the assistant right now. Please check your internet connection and try again.",
+        content: activeLang === "hi-IN"
+          ? "क्षमा करें, मैं अभी सहायक से नहीं जुड़ पा रहा हूँ।"
+          : activeLang === "ta-IN"
+          ? "மன்னிக்கவும், தற்சமயம் இணைக்க முடியவில்லை."
+          : "Sorry, I am unable to connect to the assistant right now.",
       };
       setMessages((prev) => [...prev, botMessage]);
     } finally {
@@ -146,7 +149,8 @@ export default function ChatScreen() {
 
     setSpeakingMsgId(item.id);
     try {
-      const data = await ApiService.getChatTTS(item.content, language?.code || "hi-IN");
+      const contentToSpeak = item.id === "welcome" ? t.chatWelcome : item.content;
+      const data = await ApiService.getChatTTS(contentToSpeak, activeLang);
       if (data.audio) {
         await AudioService.playBase64Audio(data.audio);
       }
@@ -168,9 +172,9 @@ export default function ChatScreen() {
         )}
         <View style={[styles.bubble, isUser ? styles.userBubble : styles.botBubble]}>
           <Text style={[styles.messageText, isUser ? styles.userText : styles.botText]}>
-            {item.content}
+            {item.id === "welcome" ? t.chatWelcome : item.content}
           </Text>
-          {!isUser && item.id !== "welcome" && (
+          {!isUser && (
             <TouchableOpacity
               style={styles.speakBtn}
               onPress={() => handleSpeak(item)}
@@ -181,7 +185,7 @@ export default function ChatScreen() {
                 color={speakingMsgId === item.id ? "#F5C518" : "#A8D5B5"}
               />
               <Text style={styles.speakBtnText}>
-                {speakingMsgId === item.id ? "Playing..." : "Listen"}
+                {speakingMsgId === item.id ? t.playingBtn : t.listenBtn}
               </Text>
             </TouchableOpacity>
           )}
@@ -211,11 +215,7 @@ export default function ChatScreen() {
           <View style={styles.recordingIndicator}>
             <View style={styles.pulsingDot} />
             <Text style={styles.recordingText}>
-              {language?.code === "hi-IN"
-                ? "सुन रहा हूँ... रोकने के लिए टैप करें"
-                : language?.code === "ta-IN"
-                ? "கேட்கிறது... நிறுத்த தட்டவும்"
-                : "Listening... Tap to stop"}
+              {t.listeningText}
             </Text>
           </View>
         )}
@@ -224,27 +224,21 @@ export default function ChatScreen() {
         {isTranscribing && (
           <View style={styles.typingIndicator}>
             <ActivityIndicator size="small" color="#F5C518" />
-            <Text style={styles.typingText}>Transcribing your voice...</Text>
+            <Text style={styles.typingText}>{t.transcribingText}</Text>
           </View>
         )}
 
         {loading && (
           <View style={styles.typingIndicator}>
             <ActivityIndicator size="small" color="#F5C518" />
-            <Text style={styles.typingText}>GramSeva Assistant is thinking...</Text>
+            <Text style={styles.typingText}>{t.thinkingText}</Text>
           </View>
         )}
 
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.input}
-            placeholder={
-              language?.code === "hi-IN"
-                ? "योजनाओं के बारे में कुछ भी पूछें..."
-                : language?.code === "ta-IN"
-                ? "திட்டங்களைப் பற்றி கேளுங்கள்..."
-                : "Ask anything about schemes..."
-            }
+            placeholder={t.chatPlaceholder}
             placeholderTextColor="#5a8a6a"
             value={inputText}
             onChangeText={setInputText}

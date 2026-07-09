@@ -6,6 +6,7 @@ import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSessionStore } from "@/store/session.store";
 import { ApiService } from "@/services/api.service";
+import { getTranslatedSchemeName } from "@/constants/schemeTranslations";
 
 interface Props {
   scheme: {
@@ -33,13 +34,7 @@ export default function SchemeCard({ scheme, language, application, onApplySucce
   const [applying, setApplying] = useState(false);
   const [applied, setApplied] = useState(false);
 
-  const localName =
-    language?.code === "ta-IN" ? scheme.name_ta :
-    language?.code === "hi-IN" ? scheme.name_hi :
-    language?.code === "te-IN" ? scheme.name_te :
-    language?.code === "kn-IN" ? scheme.name_kn :
-    language?.code === "mr-IN" ? scheme.name_mr :
-    language?.code === "bn-IN" ? scheme.name_bn : null;
+  const localName = getTranslatedSchemeName(scheme, language?.code || "en-IN");
 
   const handleApply = async () => {
     if (!isLoggedIn || !user?.id) {

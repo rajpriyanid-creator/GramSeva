@@ -14,6 +14,7 @@ import * as Location from "expo-location";
 import { Ionicons } from "@expo/vector-icons";
 import { useSessionStore } from "@/store/session.store";
 import { ApiService } from "@/services/api.service";
+import { TRANSLATIONS } from "@/constants/translations";
 
 interface CSC {
   id: string;
@@ -27,10 +28,13 @@ interface CSC {
 }
 
 export default function CSCScreen() {
-  const { profile } = useSessionStore();
+  const { profile, language } = useSessionStore();
   const [cscs, setCscs] = useState<CSC[]>([]);
   const [loading, setLoading] = useState(false);
   const [locationGranted, setLocationGranted] = useState(false);
+
+  const activeLang = language?.code || "en-IN";
+  const t = TRANSLATIONS[activeLang] || TRANSLATIONS["en-IN"];
 
   useEffect(() => {
     fetchNearbyCSCs();
@@ -64,7 +68,7 @@ export default function CSCScreen() {
       });
       setCscs(data.cscs || []);
     } catch (err) {
-      Alert.alert("Error", "Could not fetch nearby CSCs.");
+      Alert.alert("Error", t.cscNone || "Could not fetch nearby CSCs.");
     } finally {
       setLoading(false);
     }
@@ -82,23 +86,23 @@ export default function CSCScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Nearby Service Centres</Text>
+        <Text style={styles.headerTitle}>{t.cscTitle}</Text>
         <Text style={styles.headerSubtitle}>
-          Common Service Centres (CSC / Jan Seva Kendra)
+          {t.cscSub}
         </Text>
       </View>
 
       <View style={styles.infoBox}>
         <Ionicons name="information-circle" size={18} color="#F5C518" />
         <Text style={styles.infoText}>
-          Visit any CSC for free assisted application help
+          {t.cscHelp}
         </Text>
       </View>
 
       {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#F5C518" />
-          <Text style={styles.loadingText}>Finding nearest centres...</Text>
+          <Text style={styles.loadingText}>{t.cscFinding}</Text>
         </View>
       ) : (
         <FlatList
@@ -130,14 +134,14 @@ export default function CSCScreen() {
                   onPress={() => callCSC(item.phone)}
                 >
                   <Ionicons name="call" size={16} color="#0A3728" />
-                  <Text style={styles.callText}>Call</Text>
+                  <Text style={styles.callText}>{t.cscCall}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.mapsButton}
                   onPress={() => openMaps(item)}
                 >
                   <Ionicons name="map" size={16} color="#0A3728" />
-                  <Text style={styles.mapsText}>Directions</Text>
+                  <Text style={styles.mapsText}>{t.cscDirections}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -145,12 +149,12 @@ export default function CSCScreen() {
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Ionicons name="location-outline" size={48} color="#A8D5B5" />
-              <Text style={styles.emptyText}>No CSCs found nearby.</Text>
+              <Text style={styles.emptyText}>{t.cscNone}</Text>
               <TouchableOpacity
                 style={styles.retryButton}
                 onPress={fetchNearbyCSCs}
               >
-                <Text style={styles.retryText}>Try Again</Text>
+                <Text style={styles.retryText}>{t.cscRetry}</Text>
               </TouchableOpacity>
             </View>
           }

@@ -15,6 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as FileSystem from "expo-file-system";
 import { useSessionStore } from "@/store/session.store";
 import { ApiService } from "@/services/api.service";
+import { getTranslatedSchemeName } from "@/constants/schemeTranslations";
 
 export default function SchemeDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -56,20 +57,7 @@ export default function SchemeDetailScreen() {
     }
   };
 
-  const localName =
-    language?.code === "ta-IN"
-      ? scheme?.name_ta
-      : language?.code === "hi-IN"
-      ? scheme?.name_hi
-      : language?.code === "te-IN"
-      ? scheme?.name_te
-      : language?.code === "kn-IN"
-      ? scheme?.name_kn
-      : language?.code === "mr-IN"
-      ? scheme?.name_mr
-      : language?.code === "bn-IN"
-      ? scheme?.name_bn
-      : null;
+  const localName = getTranslatedSchemeName(scheme, language?.code || "en-IN");
 
   if (loading) {
     return (

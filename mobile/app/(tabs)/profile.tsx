@@ -8,11 +8,14 @@ import {
   SafeAreaView,
   Alert,
   RefreshControl,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useSessionStore } from "@/store/session.store";
 import { ApiService } from "@/services/api.service";
+import { LANGUAGES } from "@/constants/languages";
+import { TRANSLATIONS } from "@/constants/translations";
 
 export default function ProfileScreen() {
   const { user, token, logout, language, setLanguage } = useSessionStore();
@@ -57,42 +60,37 @@ export default function ProfileScreen() {
 
   const activeLang = language?.code || "en-IN";
 
-  // Language options config
-  const LANGS = [
-    { code: "en-IN", name: "English 🇬🇧", label: "English" },
-    { code: "hi-IN", name: "हिन्दी 🇮🇳", label: "Hindi" },
-    { code: "ta-IN", name: "தமிழ் 🇮🇳", label: "Tamil" },
-  ];
+  // Language options config loaded from global LANGUAGES constant
+  const LANGS = LANGUAGES.map(l => ({
+    code: l.code,
+    name: l.nativeName,
+    label: l.englishName,
+    flag: l.flag,
+    states: l.states,
+    greetings: l.greetings
+  }));
 
   const handleLanguageChange = (langCode: string) => {
-    const matched = LANGS.find(l => l.code === langCode);
+    const matched = LANGUAGES.find(l => l.code === langCode);
     if (matched) {
-      // Find full translation structure from state/store if needed, or simply update language state
-      const newLangObj = {
-        code: matched.code,
-        nativeName: matched.name,
-        englishName: matched.label,
-        flag: matched.code === "en-IN" ? "🇬🇧" : "🇮🇳",
-        states: matched.code === "en-IN" ? ["ALL"] : ["TN", "UP", "MP"],
-        greetings: { namaste: matched.code === "ta-IN" ? "வணக்கம்! 🙏" : matched.code === "hi-IN" ? "नमस्ते! 🙏" : "Hello! 👋" },
-        ui: {}
-      };
-      setLanguage(newLangObj as any);
-      Alert.alert("Success", matched.code === "ta-IN" ? "மொழி மாற்றப்பட்டது!" : matched.code === "hi-IN" ? "भाषा बदल दी गई है!" : "Language updated successfully!");
+      setLanguage(matched);
+      const successMsg = 
+        langCode === "ta-IN" ? "மொழி மாற்றப்பட்டது!" : 
+        langCode === "hi-IN" ? "भाषा बदल दी गई है!" : 
+        langCode === "te-IN" ? "భాష మార్చబడింది!" :
+        langCode === "kn-IN" ? "ಭಾಷೆಯನ್ನು ಯಶಸ್ವಿಯಾಗಿ ನವೀಕರಿಸಲಾಗಿದೆ!" :
+        langCode === "mr-IN" ? "भाषा बदलण्यात आली आहे!" :
+        langCode === "bn-IN" ? "ভাষা পরিবর্তন করা হয়েছে!" :
+        langCode === "gu-IN" ? "ભાષા બદલાઈ ગઈ છે!" :
+        langCode === "ml-IN" ? "ഭാഷ മാറ്റിയിരിക്കുന്നു!" :
+        langCode === "or-IN" ? "ଭାଷା ପରିବର୍ତ୍ତନ ହୋଇଛି!" :
+        langCode === "pa-IN" ? "ਭਾਸ਼ਾ ਬਦਲੀ ਗਈ ਹੈ!" :
+        "Language updated successfully!";
+      Alert.alert("Success", successMsg);
     }
   };
 
-  const t = {
-    title: activeLang === "ta-IN" ? "சுயவிவரம்" : activeLang === "hi-IN" ? "मेरी प्रोफ़ाइल" : "My Profile",
-    editBtn: activeLang === "ta-IN" ? "விவரங்களை திருத்து" : activeLang === "hi-IN" ? "जानकारी बदलें / एडिट करें" : "Edit Profile Details",
-    logoutBtn: activeLang === "ta-IN" ? "வெளியேறு" : activeLang === "hi-IN" ? "लॉगआउट" : "Logout",
-    appLang: activeLang === "ta-IN" ? "பயன்பாட்டு மொழி" : activeLang === "hi-IN" ? "ऐप की भाषा" : "App Language",
-    personal: activeLang === "ta-IN" ? "தனிப்பட்ட விவரங்கள்" : activeLang === "hi-IN" ? "व्यक्तिगत जानकारी" : "Personal Details",
-    location: activeLang === "ta-IN" ? "இருப்பிடம்" : activeLang === "hi-IN" ? "स्थान विवरण" : "Location Details",
-    economic: activeLang === "ta-IN" ? "பொருளாதார நிலை" : activeLang === "hi-IN" ? "आर्थिक विवरण" : "Economic Details",
-    documents: activeLang === "ta-IN" ? "ஆவணங்கள்" : activeLang === "hi-IN" ? "सरकारी दस्तावेज" : "Government Documents",
-    bank: activeLang === "ta-IN" ? "வங்கி விவரங்கள்" : activeLang === "hi-IN" ? "बैंक खाता विवरण" : "Bank Details",
-  };
+  const t = TRANSLATIONS[activeLang] || TRANSLATIONS["en-IN"];
 
   const renderInfoRow = (label: string, value: any) => {
     return (
