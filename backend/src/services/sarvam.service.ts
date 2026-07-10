@@ -15,11 +15,16 @@ const sarvam = axios.create({
 
 // ─── Speech-to-Text ────────────────────────────────────────────────────────
 
+/**
+ * Transcribe audio. If languageCode is "unknown", Sarvam auto-detects
+ * the spoken language. Returns { transcript, detected_language_code }.
+ */
 export async function transcribeAudio(
   audioBase64: string,
   languageCode: string
-): Promise<string> {
-  const lang = languageCode === "en-IN" ? "hi-IN" : languageCode; // Fall back to Hinglish for English voice STT
+): Promise<{ transcript: string; detected_language_code: string }> {
+  // Use the language code as-is. Pass "unknown" for auto-detection.
+  const lang = languageCode || "unknown";
 
   const audioBuffer = Buffer.from(audioBase64, "base64");
   const audioStream = new Readable();
@@ -40,7 +45,10 @@ export async function transcribeAudio(
       ...form.getHeaders(),
     },
   });
-  return response.data.transcript || "";
+  const transcript = response.data.transcript || "";
+  // Sarvam returns the actual detected language in the response
+  const detected_language_code = response.data.language_code || lang;
+  return { transcript, detected_language_code };
 }
 
 // ─── Translation ───────────────────────────────────────────────────────────

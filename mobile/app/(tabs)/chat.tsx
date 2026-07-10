@@ -48,6 +48,9 @@ export default function ChatScreen() {
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const recordingRef = useRef<Audio.Recording | null>(null);
+  // Tracks the language Sarvam detected in the user's last voice input.
+  // Used so TTS speaks back in the same language the user spoke, not the UI lang.
+  const [detectedSpeakLang, setDetectedSpeakLang] = useState<string | null>(null);
 
   const startChatRecording = async () => {
     try {
@@ -82,9 +85,16 @@ export default function ChatScreen() {
         encoding: FileSystem.EncodingType.Base64,
       });
 
-      const res = await ApiService.rawTranscribe(base64Audio, activeLang);
+      // Send "unknown" so Sarvam auto-detects the spoken language.
+      // This means if user speaks English, it transcribes in English;
+      // if Hindi, in Hindi — regardless of UI language setting.
+      const res = await ApiService.rawTranscribe(base64Audio, "unknown");
       if (res.transcript) {
         setInputText(res.transcript);
+        // Store the detected language for TTS reply if available
+        if (res.detected_language_code) {
+          setDetectedSpeakLang(res.detected_language_code);
+        }
       }
     } catch (err) {
       Alert.alert("Error", "Could not process voice. Please try again.");
@@ -158,8 +168,9 @@ export default function ChatScreen() {
     setSpeakingMsgId(item.id);
     try {
       const contentToSpeak = item.id === "welcome" ? t.chatWelcome : item.content;
-      // Pass the user's active language code so TTS speaks in the right voice
-      const data = await ApiService.getChatTTS(contentToSpeak, activeLang);
+      // Use detected spoken language for TTS if available, otherwise fall back to UI language
+      const ttsLang = detectedSpeakLang || activeLang;
+      const data = await ApiService.getChatTTS(contentToSpeak, ttsLang);
       if (data.audio) {
         await AudioService.playBase64Audio(data.audio);
       }

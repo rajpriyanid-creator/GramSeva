@@ -25,10 +25,10 @@ eligibilityRouter.post(
       }
 
       // Step 1: Speech-to-text via Sarvam
-      const transcript = await transcribeAudio(audio, language_code);
+      const { transcript, detected_language_code } = await transcribeAudio(audio, language_code);
 
       // Step 2: Translate to English for entity extraction
-      const english_text = await translateToEnglish(transcript, language_code);
+      const english_text = await translateToEnglish(transcript, detected_language_code);
 
       // Step 3: TTS confirmation in the user's language
       const confirmationMap: Record<string, string> = {
@@ -45,10 +45,10 @@ eligibilityRouter.post(
         "en-IN": `You said: ${transcript}`,
       };
       const confirmText =
-        confirmationMap[language_code] || `You said: ${transcript}`;
+        confirmationMap[detected_language_code] || `You said: ${transcript}`;
       let confirmation_audio = "";
       try {
-        confirmation_audio = await textToSpeech(confirmText, language_code);
+        confirmation_audio = await textToSpeech(confirmText, detected_language_code);
       } catch (ttsErr: any) {
         console.warn("[TTS Warning] Confirmation audio failed:", ttsErr.message);
       }
@@ -72,11 +72,12 @@ eligibilityRouter.post(
   async (req: Request, res: Response) => {
     try {
       const { audio, language_code } = req.body;
-      if (!audio || !language_code) {
-        return res.status(400).json({ error: "audio and language_code are required" });
+      if (!audio) {
+        return res.status(400).json({ error: "audio is required" });
       }
-      const transcript = await transcribeAudio(audio, language_code);
-      res.json({ transcript });
+      // Use "unknown" for auto-detection when no language_code is provided
+      const { transcript, detected_language_code } = await transcribeAudio(audio, language_code || "unknown");
+      res.json({ transcript, detected_language_code });
     } catch (err: any) {
       console.error("[/raw-transcribe]", err.message);
       res.status(500).json({ error: err.message });
