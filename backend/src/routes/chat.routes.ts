@@ -109,8 +109,8 @@ chatRouter.post("/tts", async (req: Request, res: Response) => {
     const { text, language_code } = req.body;
     if (!text) return res.status(400).json({ error: "text is required" });
 
-    // Call Sarvam TTS
-    const base64Audio = await textToSpeech(text, language_code || "hi-IN");
+    // Call Sarvam TTS — use the language passed from client, fallback to en-IN (not hi-IN)
+    const base64Audio = await textToSpeech(text, language_code || "en-IN");
     res.json({ audio: base64Audio });
   } catch (err: any) {
     console.error("[Chat TTS Error]:", err.message);

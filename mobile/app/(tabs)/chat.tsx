@@ -142,14 +142,23 @@ export default function ChatScreen() {
   };
 
   const handleSpeak = async (item: Message) => {
-    if (speakingMsgId) {
+    // If this specific message is already speaking — STOP it
+    if (speakingMsgId === item.id) {
+      await AudioService.stopPlayback();
       setSpeakingMsgId(null);
       return;
+    }
+
+    // If a different message is playing, stop it first
+    if (speakingMsgId) {
+      await AudioService.stopPlayback();
+      setSpeakingMsgId(null);
     }
 
     setSpeakingMsgId(item.id);
     try {
       const contentToSpeak = item.id === "welcome" ? t.chatWelcome : item.content;
+      // Pass the user's active language code so TTS speaks in the right voice
       const data = await ApiService.getChatTTS(contentToSpeak, activeLang);
       if (data.audio) {
         await AudioService.playBase64Audio(data.audio);

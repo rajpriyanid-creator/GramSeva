@@ -1,11 +1,34 @@
 import { Audio, AVPlaybackStatus } from "expo-av";
 import * as FileSystem from "expo-file-system";
 
+// Module-level reference so we can stop playback from outside
+let _currentSound: Audio.Sound | null = null;
+
 export const AudioService = {
   /**
+   * Stop any currently playing TTS audio immediately.
+   */
+  async stopPlayback(): Promise<void> {
+    if (_currentSound) {
+      try {
+        await _currentSound.stopAsync();
+        await _currentSound.unloadAsync();
+      } catch {
+        // ignore errors during stop
+      } finally {
+        _currentSound = null;
+      }
+    }
+  },
+
+  /**
    * Play a base64-encoded WAV audio string returned by Sarvam TTS.
+   * If audio is already playing, stops it first.
    */
   async playBase64Audio(base64Audio: string): Promise<void> {
+    // Stop any existing playback first
+    await AudioService.stopPlayback();
+
     const uri = `${FileSystem.cacheDirectory}tts_${Date.now()}.wav`;
     try {
       // Write base64 to temp file
@@ -26,12 +49,17 @@ export const AudioService = {
         { shouldPlay: true, volume: 1.0 }
       );
 
-      // Wait until done
+      _currentSound = sound;
+
+      // Wait until done (or stopped externally)
       await new Promise<void>((resolve) => {
         sound.setOnPlaybackStatusUpdate((status: AVPlaybackStatus) => {
-          if (status.isLoaded && status.didJustFinish) {
-            sound.unloadAsync();
-            resolve();
+          if (status.isLoaded && (status.didJustFinish || !status.isPlaying)) {
+            if (status.isLoaded && status.didJustFinish) {
+              sound.unloadAsync().catch(() => {});
+              _currentSound = null;
+              resolve();
+            }
           }
         });
       });
