@@ -6,8 +6,10 @@ GramSeva is a voice-first mobile application designed to help rural Indians disc
 
 ---
 
-## 🌐 Live Deployments
+## 🌐 Live Deployments & Builds
 
+*   **Android Mobile Application (Direct APK):** [Download gramseva-release.apk](https://github.com/rajpriyanid-creator/GramSeva/raw/main/releases/gramseva-release.apk)
+*   **Expo EAS Build ID:** `f834b771-d10c-42c4-a655-3053ab5353c0`
 *   **Admin Dashboard (Operations Portal):** [https://gramseva-admin.onrender.com/](https://gramseva-admin.onrender.com/)
 *   **Production Backend API Endpoint:** [https://gramseva-api-c102.onrender.com/](https://gramseva-api-c102.onrender.com/)
 *   **API Health Status:** [https://gramseva-api-c102.onrender.com/health](https://gramseva-api-c102.onrender.com/health)
