@@ -17,7 +17,7 @@ cscRouter.get("/nearby", async (req: Request, res: Response) => {
       const results = await runQuery(
         `
         MATCH (csc:CSC)-[:LOCATED_IN]->(dist:District)-[:PART_OF]->(st:State)
-        WHERE st.code = $state OR $state = 'ALL'
+        WHERE st.code = $state OR st.name = $state OR $state = 'ALL'
         WITH csc, dist, st,
              point.distance(
                point({latitude: csc.lat, longitude: csc.lng}),
@@ -41,7 +41,8 @@ cscRouter.get("/nearby", async (req: Request, res: Response) => {
     // Fallback: return all CSCs in the state
     const results = await runQuery(
       `
-      MATCH (csc:CSC)-[:LOCATED_IN]->(dist:District)-[:PART_OF]->(st:State {code: $state})
+      MATCH (csc:CSC)-[:LOCATED_IN]->(dist:District)-[:PART_OF]->(st:State)
+      WHERE st.code = $state OR st.name = $state
       RETURN csc {
         .*,
         district: dist.name,

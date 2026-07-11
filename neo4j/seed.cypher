@@ -478,6 +478,26 @@ MERGE (csc1:CSC {id:'CSC_TN_001'})
                timings:'Mon–Sat 9am–5pm', lat:13.0827, lng:80.2707};
 MATCH (csc1:CSC {id:'CSC_TN_001'}), (d:District {id:'DIST_CHENNAI'}) MERGE (csc1)-[:LOCATED_IN]->(d);
 
+MERGE (csc1b:CSC {id:'CSC_TN_001B'})
+  SET csc1b += {name:'Adyar Jan Seva Kendra', phone:'044-24419876',
+               timings:'Mon–Sat 9am–5pm', lat:13.0012, lng:80.2565};
+MATCH (csc1b:CSC {id:'CSC_TN_001B'}), (d:District {id:'DIST_CHENNAI'}) MERGE (csc1b)-[:LOCATED_IN]->(d);
+
+MERGE (csc1c:CSC {id:'CSC_TN_001C'})
+  SET csc1c += {name:'T. Nagar Mee-Seva Centre', phone:'044-28151234',
+               timings:'Mon–Sat 9am–6pm', lat:13.0418, lng:80.2341};
+MATCH (csc1c:CSC {id:'CSC_TN_001C'}), (d:District {id:'DIST_CHENNAI'}) MERGE (csc1c)-[:LOCATED_IN]->(d);
+
+MERGE (csc1d:CSC {id:'CSC_TN_001D'})
+  SET csc1d += {name:'Mylapore CSC Centre', phone:'044-24645678',
+               timings:'Mon–Sat 9am–5pm', lat:13.0330, lng:80.2690};
+MATCH (csc1d:CSC {id:'CSC_TN_001D'}), (d:District {id:'DIST_CHENNAI'}) MERGE (csc1d)-[:LOCATED_IN]->(d);
+
+MERGE (csc1e:CSC {id:'CSC_TN_001E'})
+  SET csc1e += {name:'Anna Nagar CSC', phone:'044-26214321',
+               timings:'Mon–Sat 9am–6pm', lat:13.0850, lng:80.2101};
+MATCH (csc1e:CSC {id:'CSC_TN_001E'}), (d:District {id:'DIST_CHENNAI'}) MERGE (csc1e)-[:LOCATED_IN]->(d);
+
 MERGE (csc2:CSC {id:'CSC_TN_002'})
   SET csc2 += {name:'Vellore Town CSC', phone:'0416-2234567',
                timings:'Mon–Sat 9am–5pm', lat:12.9165, lng:79.1325};
