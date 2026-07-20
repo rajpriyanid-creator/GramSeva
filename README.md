@@ -166,5 +166,3 @@ Scan the QR code in your terminal with the Expo Go app on your phone.
 
 ---
 
-## 📄 License
-Distributed under the MIT License. Built for **HACKHAZARDS '26**.
